@@ -1,25 +1,28 @@
 # 🏗️ WAREHOUSEPOS - COMPLETE REBUILD PLAN
 
 > **Date:** January 27, 2026  
-> **Version:** 1.0  
+> **Version:** 2.0 (Updated)  
 > **Status:** PLANNING PHASE  
-> **Objective:** Build a world-class POS system from scratch
+> **Objective:** Build a world-class, visually stunning POS system for Ghana & Nigeria
 
 ---
 
 ## 📋 TABLE OF CONTENTS
 
 1. [Project Overview](#1-project-overview)
-2. [Technical Stack (Simplified)](#2-technical-stack-simplified)
-3. [Database Schema Design](#3-database-schema-design)
-4. [Application Structure](#4-application-structure)
-5. [Core Modules](#5-core-modules)
-6. [Development Phases](#6-development-phases)
-7. [API Design](#7-api-design)
-8. [Authentication Strategy](#8-authentication-strategy)
-9. [Offline-First Strategy](#9-offline-first-strategy)
-10. [Testing Strategy](#10-testing-strategy)
-11. [Deployment Strategy](#11-deployment-strategy)
+2. [The 4 Applications](#2-the-4-applications)
+3. [Visual Design System](#3-visual-design-system)
+4. [Ghana/Nigeria First Approach](#4-ghananigeria-first-approach)
+5. [Technical Stack](#5-technical-stack)
+6. [Database Schema Design](#6-database-schema-design)
+7. [Application Structure](#7-application-structure)
+8. [Core Modules by App](#8-core-modules-by-app)
+9. [Development Phases](#9-development-phases)
+10. [API Design](#10-api-design)
+11. [Authentication Strategy](#11-authentication-strategy)
+12. [Integrations](#12-integrations)
+13. [Offline-First Strategy](#13-offline-first-strategy)
+14. [Deployment Strategy](#14-deployment-strategy)
 
 ---
 
@@ -27,714 +30,1445 @@
 
 ### 1.1 What is WarehousePOS?
 
-WarehousePOS is a **cloud-based Point of Sale and Inventory Management system** designed for small to medium businesses in Ghana and Nigeria. 
+WarehousePOS is a **beautiful, modern, cloud-based business management platform** designed specifically for small to medium businesses in **Ghana and Nigeria**. It consists of 4 interconnected applications that work together seamlessly.
 
 ### 1.2 Core Principles
 
 | Principle | Description |
 |-----------|-------------|
-| **Simple** | Do one thing well before adding more |
-| **Reliable** | Working features only, no placeholders |
-| **Fast** | Optimized for slow networks and old devices |
-| **Offline-Ready** | Full functionality without internet |
-| **Maintainable** | Clean code, good documentation |
+| **🎨 Beautiful** | Visually stunning, modern UI that users love |
+| **🇬🇭🇳🇬 Africa First** | Built for Ghana & Nigeria from day one |
+| **⚡ Fast** | Optimized for slow networks and affordable devices |
+| **📴 Offline-Ready** | Full functionality without internet |
+| **🔒 Reliable** | Working features only, no placeholders |
+| **📱 Mobile First** | Touch-friendly, responsive design |
 
-### 1.3 Target MVP Features (Phase 1)
+### 1.3 Target Users
 
-1. ✅ User Authentication (Email + Phone)
-2. ✅ Product Management (CRUD)
-3. ✅ Category Management
-4. ✅ Stock Management
-5. ✅ Point of Sale (Checkout)
-6. ✅ Sales History
-7. ✅ Customer Management
-8. ✅ Basic Reports
-9. ✅ Receipt Printing
-10. ✅ Offline Mode
-
-### 1.4 Future Features (Phase 2+)
-
-- Multi-store support
-- Advanced reporting
-- Loyalty programs
-- Online storefront
-- Delivery tracking
-- WhatsApp integration
-- SMS notifications
-- Multi-currency
+| User Type | App | Description |
+|-----------|-----|-------------|
+| **Vendor/Business Owner** | POS App | Manages their business daily |
+| **Cashier/Staff** | POS App | Handles sales and customers |
+| **Delivery Rider** | Delivery App | Manages deliveries |
+| **Fleet Manager** | Delivery Dashboard | Oversees all riders |
+| **Customer** | Vendor Portal | Views store, places orders |
+| **Platform Admin** | Admin Portal | Manages entire platform |
 
 ---
 
-## 2. TECHNICAL STACK (SIMPLIFIED)
+## 2. THE 4 APPLICATIONS
 
-### 2.1 Frontend
+### 2.1 Architecture Overview
 
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| **React 19** | UI Framework | Latest, familiar, great ecosystem |
-| **TypeScript** | Type Safety | Catch errors at compile time |
-| **Vite** | Build Tool | Fast development, optimized builds |
-| **TailwindCSS** | Styling | Rapid UI development |
-| **Shadcn/ui** | Components | Beautiful, accessible, customizable |
-| **TanStack Query** | Server State | Caching, refetching, mutations |
-| **Zustand** | Client State | Simple, minimal boilerplate |
-| **Dexie.js** | IndexedDB | Offline storage with good DX |
-| **React Hook Form** | Forms | Performance, validation |
-| **Zod** | Validation | Runtime type safety |
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        WAREHOUSEPOS ECOSYSTEM                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│   🇬🇭 GHANA                                    🇳🇬 NIGERIA                        │
+│   ├── mNotify (SMS/OTP)                       ├── Termii (SMS/OTP)              │
+│   ├── Paystack (GHS)                          ├── Paystack (NGN)                │
+│   └── MTN MoMo                                └── Bank Transfer                 │
+│                                                                                  │
+│   ┌─────────────────────────────────────────────────────────────────────────┐   │
+│   │                         SHARED SUPABASE BACKEND                          │   │
+│   │   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │   │
+│   │   │   Auth   │ │ Database │ │ Storage  │ │ Realtime │ │ Functions│     │   │
+│   │   └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘     │   │
+│   └─────────────────────────────────────────────────────────────────────────┘   │
+│                                        │                                         │
+│         ┌──────────────────────────────┼──────────────────────────────┐         │
+│         │                              │                              │         │
+│         ▼                              ▼                              ▼         │
+│   ┌───────────┐                 ┌───────────┐                  ┌───────────┐    │
+│   │    📱     │                 │    🚚     │                  │    🌐     │    │
+│   │  POS APP  │◄───────────────►│ DELIVERY  │◄────────────────►│  VENDOR   │    │
+│   │           │                 │ DASHBOARD │                  │  PORTAL   │    │
+│   │ • Sales   │   Orders &      │           │   Order Status   │           │    │
+│   │ • Stock   │   Deliveries    │ • Riders  │   & Tracking     │ • Store   │    │
+│   │ • Reports │                 │ • Routes  │                  │ • Orders  │    │
+│   │ • Staff   │                 │ • Track   │                  │ • Account │    │
+│   └─────┬─────┘                 └─────┬─────┘                  └─────┬─────┘    │
+│         │                              │                              │         │
+│         └──────────────────────────────┼──────────────────────────────┘         │
+│                                        │                                         │
+│                                        ▼                                         │
+│                                 ┌───────────┐                                   │
+│                                 │    👑     │                                   │
+│                                 │   ADMIN   │                                   │
+│                                 │  PORTAL   │                                   │
+│                                 │           │                                   │
+│                                 │ • Tenants │                                   │
+│                                 │ • Revenue │                                   │
+│                                 │ • Support │                                   │
+│                                 │ • System  │                                   │
+│                                 └───────────┘                                   │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
 
-### 2.2 Backend
+### 2.2 App Details
 
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| **Supabase** | Backend Platform | Auth, DB, Storage, Functions |
-| **PostgreSQL** | Database | Reliable, feature-rich |
-| **Edge Functions** | Serverless | For integrations (payments, SMS) |
+#### 📱 APP 1: Main POS/Management App
+**URL:** `app.warehousepos.com`  
+**Users:** Business owners, managers, cashiers
 
-### 2.3 Integrations
+| Feature | Description |
+|---------|-------------|
+| Point of Sale | Beautiful checkout with cart, payments, receipts |
+| Inventory | Products, categories, stock levels, alerts |
+| Customers | CRM, credit, loyalty points |
+| Sales History | Complete transaction records |
+| Reports & Analytics | Dashboard, charts, insights |
+| Staff Management | Users, roles, permissions |
+| Settings | Store config, integrations |
+| Offline Mode | Full functionality without internet |
 
-| Service | Purpose | Priority |
-|---------|---------|----------|
-| **Paystack** | Payments | Phase 1 |
-| **mNotify** | SMS/OTP | Phase 1 |
-| **WhatsApp API** | Messaging | Phase 2 |
+#### 🚚 APP 2: Delivery System Dashboard
+**URL:** `delivery.warehousepos.com`  
+**Users:** Fleet managers, delivery coordinators, riders
 
-### 2.4 Architecture Diagram
+| Feature | Description |
+|---------|-------------|
+| Rider Management | Add/manage delivery personnel |
+| Live Tracking | Real-time rider locations on map |
+| Order Assignment | Assign orders to riders |
+| Route Optimization | Suggest best delivery routes |
+| Performance Metrics | Delivery times, ratings |
+| Rider App | Mobile view for riders (assignments, navigation) |
+| Earnings | Track rider payments/commissions |
+| Zones | Delivery area management |
+
+#### 🌐 APP 3: Vendor Portal (Public Storefront)
+**URL:** `{store-slug}.warehousepos.com`  
+**Users:** End customers of vendors
+
+| Feature | Description |
+|---------|-------------|
+| Store Catalog | Beautiful product browsing |
+| Shopping Cart | Add items, apply discounts |
+| Checkout | Place orders (pickup or delivery) |
+| Order Tracking | Real-time order status |
+| Account | Order history, saved addresses |
+| WhatsApp Integration | Order notifications, support |
+| Reviews | Product ratings and reviews |
+
+#### 👑 APP 4: Admin Portal (Platform Management)
+**URL:** `admin.warehousepos.com`  
+**Users:** WarehousePOS platform administrators
+
+| Feature | Description |
+|---------|-------------|
+| Tenant Management | All businesses on platform |
+| Subscription & Billing | Plans, payments, revenue |
+| Support Tickets | Help desk for vendors |
+| System Health | Monitoring, logs, errors |
+| Analytics | Platform-wide metrics |
+| Feature Flags | Enable/disable features |
+| Announcements | Broadcast to vendors |
+| User Management | Admin accounts, roles |
+
+### 2.3 How Apps Communicate
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         USER DEVICE                              │
+│                    DATA FLOW EXAMPLE: NEW ORDER                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │                    REACT APP                             │   │
-│   │                                                          │   │
-│   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │   │
-│   │  │    Pages     │  │  Components  │  │    Hooks     │  │   │
-│   │  └──────┬───────┘  └──────────────┘  └──────┬───────┘  │   │
-│   │         │                                    │          │   │
-│   │         └────────────────┬───────────────────┘          │   │
-│   │                          │                               │   │
-│   │  ┌───────────────────────┴───────────────────────────┐  │   │
-│   │  │              TanStack Query                        │  │   │
-│   │  │         (Caching, Refetching, Mutations)          │  │   │
-│   │  └───────────────────────┬───────────────────────────┘  │   │
-│   │                          │                               │   │
-│   │  ┌───────────┐   ┌───────┴────────┐   ┌───────────┐    │   │
-│   │  │  Zustand  │   │  API Service   │   │   Dexie   │    │   │
-│   │  │ (UI State)│   │   (Queries)    │   │(IndexedDB)│    │   │
-│   │  └───────────┘   └───────┬────────┘   └─────┬─────┘    │   │
-│   │                          │                   │          │   │
-│   └──────────────────────────┼───────────────────┼──────────┘   │
-│                              │                   │               │
-└──────────────────────────────┼───────────────────┼───────────────┘
-                               │                   │
-                    ┌──────────┴───────────────────┴──────────┐
-                    │              NETWORK                     │
-                    └──────────────────┬───────────────────────┘
-                                       │
-┌──────────────────────────────────────┴──────────────────────────┐
-│                          SUPABASE                                │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
-│  │    Auth    │  │  Database  │  │  Storage   │  │  Functions │ │
-│  │            │  │ PostgreSQL │  │  (Images)  │  │   (Edge)   │ │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
+│  1. Customer places order on VENDOR PORTAL                      │
+│     └──► Order saved to Supabase                                │
+│          └──► Realtime subscription notifies POS APP            │
+│               └──► Vendor sees new order alert 🔔               │
+│                                                                  │
+│  2. Vendor accepts order in POS APP                             │
+│     └──► Order status updated to "confirmed"                    │
+│          └──► WhatsApp notification sent to customer 📱         │
+│                                                                  │
+│  3. If delivery: Vendor assigns to rider in DELIVERY DASHBOARD  │
+│     └──► Rider receives assignment notification                 │
+│          └──► Customer can track delivery in VENDOR PORTAL      │
+│                                                                  │
+│  4. Rider completes delivery                                    │
+│     └──► Status updated, notifications sent                     │
+│          └──► Vendor sees completed in POS APP                  │
+│               └──► ADMIN PORTAL tracks revenue 📊               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. DATABASE SCHEMA DESIGN
+## 3. VISUAL DESIGN SYSTEM
 
-### 3.1 Design Principles
+### 3.1 Design Philosophy
 
-1. **Snake_case everywhere** - All columns use snake_case
-2. **UUID for all IDs** - Universal unique identifiers
-3. **Soft deletes** - Never hard delete, use `deleted_at`
-4. **Audit trails** - `created_at`, `updated_at`, `created_by`
+> **"African businesses deserve world-class software that looks as good as it works."**
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Modern & Clean** | Lots of whitespace, clear hierarchy |
+| **Vibrant Colors** | Rich, energetic palette inspired by Africa |
+| **Smooth Animations** | Subtle transitions, micro-interactions |
+| **Touch-Friendly** | Large tap targets, gesture support |
+| **Accessible** | High contrast, readable fonts |
+| **Dark Mode** | Beautiful dark theme option |
+
+### 3.2 Color Palette
+
+```css
+/* Primary Brand Colors */
+--primary: #7c3aed;        /* Vibrant Purple */
+--primary-light: #a78bfa;
+--primary-dark: #5b21b6;
+
+/* Country Accents */
+--ghana-gold: #fcd116;      /* 🇬🇭 Ghana Gold */
+--ghana-green: #006b3f;     /* 🇬🇭 Ghana Green */
+--nigeria-green: #008751;   /* 🇳🇬 Nigeria Green */
+
+/* Semantic Colors */
+--success: #10b981;         /* Emerald Green */
+--warning: #f59e0b;         /* Amber */
+--error: #ef4444;           /* Red */
+--info: #3b82f6;            /* Blue */
+
+/* Neutrals */
+--gray-50: #f9fafb;
+--gray-100: #f3f4f6;
+--gray-900: #111827;
+
+/* Dark Mode */
+--dark-bg: #0f172a;
+--dark-card: #1e293b;
+--dark-border: #334155;
+```
+
+### 3.3 Typography
+
+```css
+/* Font Family */
+font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+
+/* Scale */
+--text-xs: 0.75rem;    /* 12px */
+--text-sm: 0.875rem;   /* 14px */
+--text-base: 1rem;     /* 16px */
+--text-lg: 1.125rem;   /* 18px */
+--text-xl: 1.25rem;    /* 20px */
+--text-2xl: 1.5rem;    /* 24px */
+--text-3xl: 1.875rem;  /* 30px */
+--text-4xl: 2.25rem;   /* 36px */
+```
+
+### 3.4 Component Design Guidelines
+
+#### Cards
+```
+- Rounded corners: 12px (lg), 8px (md), 4px (sm)
+- Shadows: Subtle, layered shadows
+- Borders: 1px with low opacity
+- Hover: Subtle lift effect
+```
+
+#### Buttons
+```
+- Primary: Filled with gradient
+- Secondary: Outlined
+- Ghost: Text only
+- Large touch targets: min 44px height
+- Ripple effect on tap
+```
+
+#### Icons
+```
+- Library: Lucide React (consistent, beautiful)
+- Size: 20px default, 24px for emphasis
+- Stroke: 1.5px for lighter feel
+```
+
+#### Animations
+```
+- Duration: 150ms (fast), 300ms (normal), 500ms (slow)
+- Easing: cubic-bezier(0.4, 0, 0.2, 1)
+- Micro-interactions: Button press, card hover, loading states
+- Page transitions: Fade + slight slide
+```
+
+### 3.5 UI Components to Build
+
+| Component | Description |
+|-----------|-------------|
+| `Button` | Primary, secondary, ghost, icon, loading states |
+| `Card` | With hover, click, variants |
+| `Input` | With label, error, icon, prefix/suffix |
+| `Select` | Searchable, multi-select |
+| `Modal` | Slide up on mobile, center on desktop |
+| `Drawer` | Side panel for forms |
+| `Toast` | Success, error, info notifications |
+| `DataTable` | Sortable, filterable, pagination |
+| `Chart` | Line, bar, pie with nice styling |
+| `Avatar` | With initials, image, status indicator |
+| `Badge` | Status indicators |
+| `Skeleton` | Loading placeholders |
+| `EmptyState` | Beautiful empty screens |
+
+### 3.6 Visual Examples
+
+#### Dashboard Card
+```
+┌─────────────────────────────────────┐
+│  📈 Today's Sales                    │
+│                                      │
+│  ₵ 12,450.00        ↑ 23%           │
+│  ██████████████░░░░░                 │
+│                                      │
+│  145 transactions                    │
+└─────────────────────────────────────┘
+```
+
+#### Product Card
+```
+┌─────────────────────────────────────┐
+│  ┌─────────────────────────────┐   │
+│  │         [Product Image]      │   │
+│  │                              │   │
+│  └─────────────────────────────┘   │
+│                                      │
+│  Coca-Cola 50cl                      │
+│  ₵ 8.00          ⭐ 4.5 (120)       │
+│                                      │
+│  [   Add to Cart   ]                │
+└─────────────────────────────────────┘
+```
+
+---
+
+## 4. GHANA/NIGERIA FIRST APPROACH
+
+### 4.1 Country Selection Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    WELCOME TO WAREHOUSEPOS                       │
+│                                                                  │
+│         "Built for African businesses, by Africans"             │
+│                                                                  │
+│                  Select your country to begin                    │
+│                                                                  │
+│   ┌─────────────────────┐    ┌─────────────────────┐           │
+│   │                     │    │                     │           │
+│   │       🇬🇭            │    │       🇳🇬            │           │
+│   │                     │    │                     │           │
+│   │      GHANA          │    │     NIGERIA         │           │
+│   │                     │    │                     │           │
+│   │   GHS • mNotify     │    │   NGN • Termii      │           │
+│   │   MTN MoMo          │    │   Bank Transfer     │           │
+│   │                     │    │                     │           │
+│   └─────────────────────┘    └─────────────────────┘           │
+│                                                                  │
+│              Your choice determines:                             │
+│              • Currency & pricing                                │
+│              • Payment methods                                   │
+│              • SMS provider                                      │
+│              • Local support                                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Country-Specific Configuration
+
+| Feature | 🇬🇭 Ghana | 🇳🇬 Nigeria |
+|---------|-----------|-------------|
+| **Currency** | GHS (₵) | NGN (₦) |
+| **SMS Provider** | mNotify | Termii |
+| **Payment Gateway** | Paystack | Paystack |
+| **Mobile Money** | MTN MoMo, Vodafone Cash | OPay, PalmPay |
+| **Bank Transfer** | Ghana banks | Nigerian banks |
+| **Timezone** | Africa/Accra (GMT) | Africa/Lagos (WAT) |
+| **Phone Format** | +233 XXX XXX XXXX | +234 XXX XXX XXXX |
+| **Tax (VAT)** | 15% | 7.5% |
+| **Support Hours** | 8am - 6pm GMT | 8am - 6pm WAT |
+
+### 4.3 Database: Country Field
+
+```sql
+-- Added to tenants table
+country TEXT NOT NULL DEFAULT 'GH', -- 'GH' or 'NG'
+currency TEXT NOT NULL DEFAULT 'GHS', -- 'GHS' or 'NGN'
+timezone TEXT NOT NULL DEFAULT 'Africa/Accra',
+phone_country_code TEXT NOT NULL DEFAULT '+233',
+tax_rate DECIMAL(5,2) DEFAULT 15.00, -- 15% for Ghana, 7.5% for Nigeria
+
+-- Country-specific settings stored in JSONB
+country_config JSONB DEFAULT '{
+  "sms_provider": "mnotify",
+  "payment_methods": ["cash", "momo", "card"],
+  "momo_providers": ["mtn", "vodafone", "airteltigo"]
+}'::jsonb
+```
+
+### 4.4 SMS Integration
+
+#### Ghana: mNotify
+```typescript
+// lib/sms/mnotify.ts
+export async function sendSMS(phone: string, message: string) {
+  const response = await fetch('https://api.mnotify.com/api/sms/quick', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      key: process.env.MNOTIFY_API_KEY,
+      to: phone,
+      msg: message,
+      sender_id: 'WarehousePOS',
+    }),
+  });
+  return response.json();
+}
+```
+
+#### Nigeria: Termii
+```typescript
+// lib/sms/termii.ts
+export async function sendSMS(phone: string, message: string) {
+  const response = await fetch('https://api.ng.termii.com/api/sms/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      api_key: process.env.TERMII_API_KEY,
+      to: phone,
+      from: 'WarehousePOS',
+      sms: message,
+      type: 'plain',
+      channel: 'generic',
+    }),
+  });
+  return response.json();
+}
+```
+
+#### Unified SMS Service
+```typescript
+// lib/sms/index.ts
+import { sendSMS as sendMNotify } from './mnotify';
+import { sendSMS as sendTermii } from './termii';
+
+export async function sendSMS(country: 'GH' | 'NG', phone: string, message: string) {
+  if (country === 'GH') {
+    return sendMNotify(phone, message);
+  } else {
+    return sendTermii(phone, message);
+  }
+}
+
+export async function sendOTP(country: 'GH' | 'NG', phone: string) {
+  const otp = generateOTP();
+  const message = `Your WarehousePOS code is: ${otp}. Valid for 10 minutes.`;
+  await sendSMS(country, phone, message);
+  return otp;
+}
+```
+
+### 4.5 WhatsApp Integration
+
+```typescript
+// lib/whatsapp/index.ts
+// Using WhatsApp Business API (Meta Cloud API)
+
+export async function sendWhatsAppMessage(phone: string, templateName: string, params: Record<string, string>) {
+  const response = await fetch(
+    `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: 'en' },
+          components: [
+            {
+              type: 'body',
+              parameters: Object.entries(params).map(([_, value]) => ({
+                type: 'text',
+                text: value,
+              })),
+            },
+          ],
+        },
+      }),
+    }
+  );
+  return response.json();
+}
+
+// Templates to create in WhatsApp Business Manager:
+// - order_confirmation
+// - order_ready
+// - delivery_started
+// - delivery_completed
+// - payment_received
+// - low_stock_alert
+```
+
+### 4.6 Currency Formatting
+
+```typescript
+// lib/currency.ts
+export function formatCurrency(amount: number, country: 'GH' | 'NG'): string {
+  const config = {
+    GH: { currency: 'GHS', symbol: '₵', locale: 'en-GH' },
+    NG: { currency: 'NGN', symbol: '₦', locale: 'en-NG' },
+  };
+
+  const { currency, locale } = config[country];
+  
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+// Usage:
+// formatCurrency(1000, 'GH') → "₵1,000.00"
+// formatCurrency(1000, 'NG') → "₦1,000.00"
+```
+
+---
+
+## 5. TECHNICAL STACK
+
+### 5.1 Frontend (All 4 Apps)
+
+| Technology | Purpose | Why |
+|------------|---------|-----|
+| **React 19** | UI Framework | Latest features, great ecosystem |
+| **TypeScript** | Type Safety | Catch errors at compile time |
+| **Vite** | Build Tool | Fast dev server, optimized builds |
+| **TailwindCSS** | Styling | Rapid UI development, consistency |
+| **Shadcn/ui** | Components | Beautiful, accessible, customizable |
+| **Framer Motion** | Animations | Smooth, declarative animations |
+| **TanStack Query** | Server State | Caching, background refetch |
+| **Zustand** | Client State | Simple, fast, TypeScript native |
+| **Dexie.js** | IndexedDB | Offline storage (POS app only) |
+| **React Hook Form** | Forms | Best performance, validation |
+| **Zod** | Validation | Runtime type safety |
+| **Recharts** | Charts | Beautiful, responsive charts |
+| **Leaflet** | Maps | Delivery tracking maps |
+
+### 5.2 Backend
+
+| Technology | Purpose |
+|------------|---------|
+| **Supabase** | Auth, Database, Storage, Realtime, Edge Functions |
+| **PostgreSQL** | Primary database |
+| **PostgREST** | Auto-generated REST API |
+| **Realtime** | Live updates between apps |
+
+### 5.3 Integrations
+
+| Service | Country | Purpose |
+|---------|---------|---------|
+| **mNotify** | 🇬🇭 Ghana | SMS & OTP |
+| **Termii** | 🇳🇬 Nigeria | SMS & OTP |
+| **Paystack** | Both | Payment processing |
+| **WhatsApp Business API** | Both | Notifications |
+| **Cloudinary** | Both | Image optimization |
+
+### 5.4 DevOps
+
+| Tool | Purpose |
+|------|---------|
+| **Vercel** | Frontend hosting |
+| **Supabase** | Backend hosting |
+| **GitHub Actions** | CI/CD |
+| **Sentry** | Error monitoring |
+| **Plausible** | Privacy-friendly analytics |
+
+---
+
+## 6. DATABASE SCHEMA DESIGN
+
+### 6.1 Design Principles
+
+1. **snake_case** - All column names
+2. **UUID** - All primary keys
+3. **Soft deletes** - `deleted_at` instead of DELETE
+4. **Audit trail** - `created_at`, `updated_at`, `created_by`
 5. **Tenant isolation** - `tenant_id` on every table
-6. **Explicit nullability** - Every column has NULL or NOT NULL
+6. **Country aware** - `country` field where needed
 
-### 3.2 Core Tables
+### 6.2 Core Tables
 
 ```sql
 -- ============================================
--- WAREHOUSEPOS DATABASE SCHEMA V1.0
+-- WAREHOUSEPOS DATABASE SCHEMA V2.0
+-- Ghana & Nigeria First
 -- ============================================
 
--- TENANTS (Multi-tenant support)
-CREATE TABLE tenants (
+-- ==========================================
+-- PLATFORM TABLES (Admin Portal)
+-- ==========================================
+
+-- Platform configuration
+CREATE TABLE platform_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key TEXT UNIQUE NOT NULL,
+    value JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Subscription plans
+CREATE TABLE subscription_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
+    description TEXT,
+    price_ghs DECIMAL(10,2) NOT NULL, -- Ghana price
+    price_ngn DECIMAL(10,2) NOT NULL, -- Nigeria price
+    billing_period TEXT DEFAULT 'monthly', -- monthly, yearly
+    features JSONB DEFAULT '[]',
+    limits JSONB DEFAULT '{}', -- { products: 100, staff: 5, stores: 1 }
+    is_active BOOLEAN DEFAULT true,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================================
+-- TENANT TABLES (Multi-tenant core)
+-- ==========================================
+
+-- Tenants (Businesses)
+CREATE TABLE tenants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Basic info
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    logo_url TEXT,
+    
+    -- Country & localization
+    country TEXT NOT NULL DEFAULT 'GH', -- 'GH' or 'NG'
+    currency TEXT NOT NULL DEFAULT 'GHS',
+    timezone TEXT NOT NULL DEFAULT 'Africa/Accra',
+    phone_country_code TEXT NOT NULL DEFAULT '+233',
+    default_tax_rate DECIMAL(5,2) DEFAULT 0,
+    
+    -- Contact
     email TEXT,
     phone TEXT,
-    currency TEXT DEFAULT 'GHS',
-    timezone TEXT DEFAULT 'Africa/Accra',
+    address TEXT,
+    city TEXT,
+    
+    -- Subscription
+    plan_id UUID REFERENCES subscription_plans(id),
+    subscription_status TEXT DEFAULT 'trial', -- trial, active, past_due, cancelled
+    trial_ends_at TIMESTAMPTZ,
+    subscription_ends_at TIMESTAMPTZ,
+    
+    -- Features & limits
+    features_enabled JSONB DEFAULT '{}',
+    
+    -- Country-specific config
+    country_config JSONB DEFAULT '{}',
+    
+    -- Status
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- USERS (Staff members)
+-- Users (Staff members)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     auth_id UUID UNIQUE, -- Supabase auth.users.id
+    
+    -- Basic info
+    full_name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    full_name TEXT NOT NULL,
-    role TEXT DEFAULT 'cashier', -- owner, manager, cashier
-    pin_hash TEXT, -- For quick login
+    avatar_url TEXT,
+    
+    -- Authentication
+    pin_hash TEXT, -- For quick POS login
+    
+    -- Role & permissions
+    role TEXT NOT NULL DEFAULT 'cashier', -- owner, manager, cashier, rider
+    permissions JSONB DEFAULT '[]',
+    
+    -- Assignment
+    store_id UUID, -- Default store
+    
+    -- Status
     is_active BOOLEAN DEFAULT true,
+    last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- STORES (Locations/branches)
+-- Stores (Locations/branches)
 CREATE TABLE stores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    
     name TEXT NOT NULL,
     address TEXT,
+    city TEXT,
     phone TEXT,
+    email TEXT,
+    
+    -- Location for delivery
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    
+    -- Settings
     is_main BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
+    
+    -- Operating hours
+    operating_hours JSONB DEFAULT '{}',
+    
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- CATEGORIES
+-- ==========================================
+-- INVENTORY TABLES
+-- ==========================================
+
+-- Categories
 CREATE TABLE categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    
     name TEXT NOT NULL,
     description TEXT,
+    image_url TEXT,
     color TEXT DEFAULT '#6366f1',
+    icon TEXT,
+    
+    parent_id UUID REFERENCES categories(id), -- For subcategories
     sort_order INTEGER DEFAULT 0,
+    
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
+    
     UNIQUE(tenant_id, name)
 );
 
--- PRODUCTS
+-- Products
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
-    sku TEXT NOT NULL,
-    barcode TEXT,
+    
+    -- Basic info
     name TEXT NOT NULL,
     description TEXT,
-    unit TEXT DEFAULT 'piece', -- piece, kg, liter, etc.
+    sku TEXT NOT NULL,
+    barcode TEXT,
+    
+    -- Pricing
     cost_price DECIMAL(12,2) DEFAULT 0,
     selling_price DECIMAL(12,2) NOT NULL,
+    compare_price DECIMAL(12,2), -- For showing discounts
+    
+    -- Tax
     tax_rate DECIMAL(5,2) DEFAULT 0,
-    image_url TEXT,
-    is_active BOOLEAN DEFAULT true,
+    tax_inclusive BOOLEAN DEFAULT false,
+    
+    -- Inventory
+    unit TEXT DEFAULT 'piece', -- piece, kg, liter, pack
     track_stock BOOLEAN DEFAULT true,
     min_stock_level INTEGER DEFAULT 0,
+    
+    -- Media
+    image_url TEXT,
+    images JSONB DEFAULT '[]', -- Array of image URLs
+    
+    -- Variants
+    has_variants BOOLEAN DEFAULT false,
+    variant_options JSONB DEFAULT '[]', -- [{ name: "Size", values: ["S", "M", "L"] }]
+    
+    -- Online store
+    show_online BOOLEAN DEFAULT true,
+    
+    -- Status
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
+    
     UNIQUE(tenant_id, sku)
 );
 
--- STOCK LEVELS (Per store)
+-- Product variants
+CREATE TABLE product_variants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    
+    name TEXT NOT NULL, -- e.g., "Large / Red"
+    sku TEXT NOT NULL,
+    barcode TEXT,
+    
+    cost_price DECIMAL(12,2),
+    selling_price DECIMAL(12,2) NOT NULL,
+    
+    options JSONB NOT NULL, -- { "Size": "Large", "Color": "Red" }
+    
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    
+    created_at TIMESTAMPTZ DEFAULT now(),
+    
+    UNIQUE(tenant_id, sku)
+);
+
+-- Stock levels (per store)
 CREATE TABLE stock_levels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    variant_id UUID REFERENCES product_variants(id) ON DELETE CASCADE,
+    
     quantity INTEGER NOT NULL DEFAULT 0,
+    reserved_quantity INTEGER DEFAULT 0, -- For pending orders
+    
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(store_id, product_id)
+    
+    UNIQUE(store_id, product_id, variant_id)
 );
 
--- STOCK MOVEMENTS (Audit trail)
+-- Stock movements (audit trail)
 CREATE TABLE stock_movements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES stores(id),
+    product_id UUID NOT NULL REFERENCES products(id),
+    variant_id UUID REFERENCES product_variants(id),
     user_id UUID REFERENCES users(id),
-    type TEXT NOT NULL, -- 'in', 'out', 'adjustment', 'transfer'
+    
+    type TEXT NOT NULL, -- 'in', 'out', 'adjustment', 'transfer', 'return'
     quantity INTEGER NOT NULL,
-    reference_type TEXT, -- 'sale', 'purchase', 'manual', 'transfer'
+    
+    reference_type TEXT, -- 'sale', 'purchase', 'manual', 'transfer', 'order'
     reference_id UUID,
+    
     reason TEXT,
     notes TEXT,
+    
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- CUSTOMERS
+-- ==========================================
+-- CUSTOMER TABLES
+-- ==========================================
+
+-- Customers
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    
+    -- Basic info
     name TEXT NOT NULL,
     phone TEXT,
     email TEXT,
+    
+    -- Address
     address TEXT,
-    notes TEXT,
+    city TEXT,
+    
+    -- For delivery
+    default_latitude DECIMAL(10,8),
+    default_longitude DECIMAL(11,8),
+    
+    -- Financials
     credit_limit DECIMAL(12,2) DEFAULT 0,
     credit_balance DECIMAL(12,2) DEFAULT 0,
+    
+    -- Loyalty
     loyalty_points INTEGER DEFAULT 0,
+    
+    -- Stats
+    total_orders INTEGER DEFAULT 0,
+    total_spent DECIMAL(12,2) DEFAULT 0,
+    last_order_at TIMESTAMPTZ,
+    
+    -- Notes
+    notes TEXT,
+    tags JSONB DEFAULT '[]',
+    
+    -- Status
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- SALES
+-- ==========================================
+-- SALES TABLES
+-- ==========================================
+
+-- Sales (POS transactions)
 CREATE TABLE sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     store_id UUID NOT NULL REFERENCES stores(id),
     user_id UUID REFERENCES users(id),
     customer_id UUID REFERENCES customers(id),
+    
     sale_number TEXT NOT NULL,
     
-    -- Items stored as JSONB array
+    -- Items (JSONB for simplicity)
     items JSONB NOT NULL DEFAULT '[]',
     
     -- Totals
     subtotal DECIMAL(12,2) NOT NULL,
     discount DECIMAL(12,2) DEFAULT 0,
     discount_type TEXT, -- 'percentage', 'fixed'
+    discount_code TEXT,
     tax DECIMAL(12,2) DEFAULT 0,
     total DECIMAL(12,2) NOT NULL,
     
     -- Payment
-    payment_method TEXT NOT NULL, -- 'cash', 'card', 'momo', 'credit'
+    payment_method TEXT NOT NULL, -- 'cash', 'card', 'momo', 'transfer', 'credit'
+    payment_reference TEXT,
     amount_paid DECIMAL(12,2) NOT NULL,
     change_given DECIMAL(12,2) DEFAULT 0,
     
     -- Status
     status TEXT DEFAULT 'completed', -- 'pending', 'completed', 'voided', 'refunded'
     
-    -- Metadata
-    notes TEXT,
+    -- Void/refund info
     voided_at TIMESTAMPTZ,
     voided_by UUID REFERENCES users(id),
     void_reason TEXT,
     
+    notes TEXT,
+    
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
+    
     UNIQUE(tenant_id, sale_number)
 );
 
--- EXPENSES
-CREATE TABLE expenses (
+-- ==========================================
+-- ONLINE ORDERS (Vendor Portal)
+-- ==========================================
+
+-- Online orders
+CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     store_id UUID NOT NULL REFERENCES stores(id),
-    user_id UUID REFERENCES users(id),
-    category TEXT NOT NULL,
-    description TEXT NOT NULL,
-    amount DECIMAL(12,2) NOT NULL,
-    payment_method TEXT DEFAULT 'cash',
-    expense_date DATE DEFAULT CURRENT_DATE,
-    receipt_url TEXT,
+    customer_id UUID REFERENCES customers(id),
+    
+    order_number TEXT NOT NULL,
+    
+    -- Customer info (captured at order time)
+    customer_name TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    customer_email TEXT,
+    
+    -- Delivery info
+    order_type TEXT NOT NULL DEFAULT 'delivery', -- 'delivery', 'pickup'
+    delivery_address TEXT,
+    delivery_city TEXT,
+    delivery_latitude DECIMAL(10,8),
+    delivery_longitude DECIMAL(11,8),
+    delivery_notes TEXT,
+    
+    -- Items
+    items JSONB NOT NULL DEFAULT '[]',
+    
+    -- Totals
+    subtotal DECIMAL(12,2) NOT NULL,
+    discount DECIMAL(12,2) DEFAULT 0,
+    delivery_fee DECIMAL(12,2) DEFAULT 0,
+    tax DECIMAL(12,2) DEFAULT 0,
+    total DECIMAL(12,2) NOT NULL,
+    
+    -- Payment
+    payment_method TEXT, -- 'cash_on_delivery', 'momo', 'card', 'transfer'
+    payment_status TEXT DEFAULT 'pending', -- 'pending', 'paid', 'failed', 'refunded'
+    payment_reference TEXT,
+    
+    -- Status
+    status TEXT DEFAULT 'pending', 
+    -- pending, confirmed, preparing, ready, out_for_delivery, delivered, cancelled
+    
+    -- Timestamps
+    confirmed_at TIMESTAMPTZ,
+    preparing_at TIMESTAMPTZ,
+    ready_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    
+    -- Cancellation
+    cancelled_by TEXT, -- 'customer', 'vendor', 'system'
+    cancel_reason TEXT,
+    
+    -- Source
+    source TEXT DEFAULT 'portal', -- 'portal', 'whatsapp', 'phone'
+    
     notes TEXT,
+    
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    
+    UNIQUE(tenant_id, order_number)
 );
 
--- SUPPLIERS
-CREATE TABLE suppliers (
+-- ==========================================
+-- DELIVERY TABLES
+-- ==========================================
+
+-- Riders (Delivery personnel)
+CREATE TABLE riders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id), -- Links to user if they have app access
+    
+    -- Basic info
     name TEXT NOT NULL,
-    contact_name TEXT,
-    phone TEXT,
+    phone TEXT NOT NULL,
     email TEXT,
-    address TEXT,
-    notes TEXT,
+    avatar_url TEXT,
+    
+    -- Vehicle
+    vehicle_type TEXT DEFAULT 'motorcycle', -- bicycle, motorcycle, car
+    vehicle_number TEXT,
+    
+    -- Status
+    status TEXT DEFAULT 'offline', -- online, offline, busy
+    current_latitude DECIMAL(10,8),
+    current_longitude DECIMAL(11,8),
+    last_location_at TIMESTAMPTZ,
+    
+    -- Stats
+    total_deliveries INTEGER DEFAULT 0,
+    total_earnings DECIMAL(12,2) DEFAULT 0,
+    average_rating DECIMAL(3,2) DEFAULT 0,
+    
+    -- Status
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- PURCHASE ORDERS
-CREATE TABLE purchase_orders (
+-- Delivery assignments
+CREATE TABLE delivery_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    store_id UUID NOT NULL REFERENCES stores(id),
-    supplier_id UUID REFERENCES suppliers(id),
-    user_id UUID REFERENCES users(id),
-    order_number TEXT NOT NULL,
-    items JSONB NOT NULL DEFAULT '[]',
-    subtotal DECIMAL(12,2) NOT NULL,
-    tax DECIMAL(12,2) DEFAULT 0,
-    total DECIMAL(12,2) NOT NULL,
-    status TEXT DEFAULT 'draft', -- 'draft', 'ordered', 'received', 'cancelled'
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    rider_id UUID NOT NULL REFERENCES riders(id),
+    
+    -- Status
+    status TEXT DEFAULT 'assigned', 
+    -- assigned, accepted, picked_up, in_transit, delivered, cancelled
+    
+    -- Timestamps
+    assigned_at TIMESTAMPTZ DEFAULT now(),
+    accepted_at TIMESTAMPTZ,
+    picked_up_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    
+    -- Tracking
+    distance_km DECIMAL(10,2),
+    duration_minutes INTEGER,
+    
+    -- Payment
+    delivery_fee DECIMAL(12,2),
+    rider_earnings DECIMAL(12,2),
+    
+    -- Rating
+    customer_rating INTEGER, -- 1-5
+    customer_feedback TEXT,
+    
     notes TEXT,
-    order_date DATE DEFAULT CURRENT_DATE,
-    expected_date DATE,
-    received_at TIMESTAMPTZ,
+    
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(tenant_id, order_number)
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- SYNC QUEUE (For offline sync)
-CREATE TABLE sync_queue (
+-- Delivery zones
+CREATE TABLE delivery_zones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    table_name TEXT NOT NULL,
-    operation TEXT NOT NULL, -- 'create', 'update', 'delete'
-    record_id UUID NOT NULL,
-    data JSONB NOT NULL,
-    retries INTEGER DEFAULT 0,
-    last_error TEXT,
-    status TEXT DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+    store_id UUID REFERENCES stores(id),
+    
+    name TEXT NOT NULL,
+    
+    -- Zone definition (polygon)
+    coordinates JSONB NOT NULL, -- Array of [lat, lng] points
+    
+    -- Pricing
+    delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
+    min_order_amount DECIMAL(10,2) DEFAULT 0,
+    
+    -- Timing
+    estimated_minutes INTEGER DEFAULT 45,
+    
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================================
+-- COMMUNICATION TABLES
+-- ==========================================
+
+-- Notification templates
+CREATE TABLE notification_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE, -- NULL for platform-wide
+    
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    
+    -- Content by channel
+    sms_content TEXT,
+    whatsapp_template_name TEXT,
+    email_subject TEXT,
+    email_content TEXT,
+    push_title TEXT,
+    push_body TEXT,
+    
+    -- Variables available
+    variables JSONB DEFAULT '[]', -- ['customer_name', 'order_number', 'total']
+    
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now()
 );
-```
 
-### 3.3 Indexes
+-- Notifications sent
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    
+    -- Recipient
+    recipient_type TEXT NOT NULL, -- 'customer', 'user', 'rider'
+    recipient_id UUID,
+    recipient_phone TEXT,
+    recipient_email TEXT,
+    
+    -- Content
+    channel TEXT NOT NULL, -- 'sms', 'whatsapp', 'email', 'push'
+    template_id UUID REFERENCES notification_templates(id),
+    content TEXT NOT NULL,
+    
+    -- Reference
+    reference_type TEXT, -- 'order', 'sale', 'delivery'
+    reference_id UUID,
+    
+    -- Status
+    status TEXT DEFAULT 'pending', -- 'pending', 'sent', 'delivered', 'failed'
+    sent_at TIMESTAMPTZ,
+    error_message TEXT,
+    
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-```sql
--- Essential indexes for performance
+-- ==========================================
+-- INDEXES
+-- ==========================================
+
+-- Tenants
+CREATE INDEX idx_tenants_country ON tenants(country);
+CREATE INDEX idx_tenants_slug ON tenants(slug);
+
+-- Users
+CREATE INDEX idx_users_tenant ON users(tenant_id);
+CREATE INDEX idx_users_auth_id ON users(auth_id);
+CREATE INDEX idx_users_phone ON users(phone);
+
+-- Products
 CREATE INDEX idx_products_tenant ON products(tenant_id);
 CREATE INDEX idx_products_category ON products(category_id);
 CREATE INDEX idx_products_sku ON products(tenant_id, sku);
 CREATE INDEX idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL;
+CREATE INDEX idx_products_active ON products(tenant_id, is_active);
 
+-- Stock
 CREATE INDEX idx_stock_levels_tenant ON stock_levels(tenant_id);
-CREATE INDEX idx_stock_levels_store ON stock_levels(store_id);
-CREATE INDEX idx_stock_levels_product ON stock_levels(product_id);
+CREATE INDEX idx_stock_levels_store_product ON stock_levels(store_id, product_id);
 
+-- Sales
 CREATE INDEX idx_sales_tenant ON sales(tenant_id);
 CREATE INDEX idx_sales_store ON sales(store_id);
-CREATE INDEX idx_sales_customer ON sales(customer_id);
 CREATE INDEX idx_sales_created ON sales(created_at);
 CREATE INDEX idx_sales_status ON sales(status);
 
+-- Orders
+CREATE INDEX idx_orders_tenant ON orders(tenant_id);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_created ON orders(created_at);
+
+-- Customers
 CREATE INDEX idx_customers_tenant ON customers(tenant_id);
 CREATE INDEX idx_customers_phone ON customers(phone);
+
+-- Riders
+CREATE INDEX idx_riders_tenant ON riders(tenant_id);
+CREATE INDEX idx_riders_status ON riders(status);
+
+-- Deliveries
+CREATE INDEX idx_delivery_assignments_order ON delivery_assignments(order_id);
+CREATE INDEX idx_delivery_assignments_rider ON delivery_assignments(rider_id);
+CREATE INDEX idx_delivery_assignments_status ON delivery_assignments(status);
 ```
 
 ---
 
-## 4. APPLICATION STRUCTURE
+## 7. APPLICATION STRUCTURE
 
-### 4.1 Folder Structure
+### 7.1 Monorepo Structure
 
 ```
 WarehousePOS/
 ├── apps/
-│   ├── marketing/              # Marketing website (already done)
+│   ├── marketing/          # ✅ Marketing website (done)
 │   │   └── src/
-│   └── pos/                    # Main POS application
-│       ├── public/
-│       │   └── manifest.json
-│       ├── src/
-│       │   ├── api/            # API services (Supabase queries)
-│       │   │   ├── products.ts
-│       │   │   ├── sales.ts
-│       │   │   ├── customers.ts
-│       │   │   └── index.ts
-│       │   │
-│       │   ├── components/     # Reusable UI components
-│       │   │   ├── ui/         # Shadcn components
-│       │   │   ├── forms/      # Form components
-│       │   │   ├── tables/     # Table components
-│       │   │   └── layout/     # Layout components
-│       │   │
-│       │   ├── features/       # Feature modules
-│       │   │   ├── auth/
-│       │   │   ├── pos/
-│       │   │   ├── inventory/
-│       │   │   ├── customers/
-│       │   │   ├── sales/
-│       │   │   ├── reports/
-│       │   │   └── settings/
-│       │   │
-│       │   ├── hooks/          # Custom hooks
-│       │   │   ├── useAuth.ts
-│       │   │   ├── useProducts.ts
-│       │   │   └── useSales.ts
-│       │   │
-│       │   ├── lib/            # Utilities
-│       │   │   ├── supabase.ts
-│       │   │   ├── db.ts       # Dexie setup
-│       │   │   ├── sync.ts     # Sync logic
-│       │   │   └── utils.ts
-│       │   │
-│       │   ├── stores/         # Zustand stores
-│       │   │   ├── authStore.ts
-│       │   │   ├── cartStore.ts
-│       │   │   └── uiStore.ts
-│       │   │
-│       │   ├── types/          # TypeScript types
-│       │   │   └── index.ts    # Generated from DB
-│       │   │
-│       │   ├── App.tsx
-│       │   ├── main.tsx
-│       │   └── index.css
-│       │
-│       ├── package.json
-│       ├── tsconfig.json
-│       ├── tailwind.config.js
-│       └── vite.config.ts
+│   │
+│   ├── pos/                # 📱 Main POS/Management App
+│   │   ├── public/
+│   │   └── src/
+│   │       ├── api/
+│   │       ├── components/
+│   │       ├── features/
+│   │       │   ├── auth/
+│   │       │   ├── pos/
+│   │       │   ├── inventory/
+│   │       │   ├── customers/
+│   │       │   ├── sales/
+│   │       │   ├── reports/
+│   │       │   └── settings/
+│   │       ├── hooks/
+│   │       ├── lib/
+│   │       ├── stores/
+│   │       └── types/
+│   │
+│   ├── delivery/           # 🚚 Delivery Dashboard
+│   │   └── src/
+│   │       ├── components/
+│   │       ├── features/
+│   │       │   ├── riders/
+│   │       │   ├── assignments/
+│   │       │   ├── tracking/
+│   │       │   ├── zones/
+│   │       │   └── reports/
+│   │       └── ...
+│   │
+│   ├── portal/             # 🌐 Vendor Portal (Customer-facing)
+│   │   └── src/
+│   │       ├── components/
+│   │       ├── features/
+│   │       │   ├── catalog/
+│   │       │   ├── cart/
+│   │       │   ├── checkout/
+│   │       │   ├── orders/
+│   │       │   └── account/
+│   │       └── ...
+│   │
+│   └── admin/              # 👑 Admin Portal
+│       └── src/
+│           ├── components/
+│           ├── features/
+│           │   ├── tenants/
+│           │   ├── subscriptions/
+│           │   ├── support/
+│           │   ├── analytics/
+│           │   └── system/
+│           └── ...
+│
+├── packages/               # Shared code
+│   ├── ui/                 # Shared UI components
+│   ├── utils/              # Shared utilities
+│   ├── types/              # Shared TypeScript types
+│   └── config/             # Shared config (tailwind, etc.)
 │
 ├── supabase/
 │   ├── migrations/
 │   │   └── 001_initial_schema.sql
 │   └── functions/
-│       ├── send-otp/
-│       └── process-payment/
+│       ├── send-sms/
+│       ├── send-whatsapp/
+│       ├── process-payment/
+│       └── webhooks/
 │
-├── docs/
-│   ├── REBUILD_PLAN.md
-│   ├── LESSONS_LEARNED.md
-│   └── API_DOCS.md
-│
-└── README.md
+└── docs/
+    ├── REBUILD_PLAN.md
+    └── LESSONS_LEARNED.md
 ```
 
-### 4.2 Component Guidelines
+### 7.2 Shared Packages
 
+#### packages/ui
 ```
-MAX 200 LINES PER COMPONENT
-
-Good:
-- ProductCard.tsx (50 lines)
-- ProductList.tsx (80 lines)
-- ProductForm.tsx (150 lines)
-
-Bad:
-- ProductPage.tsx (800 lines) ❌
-```
-
----
-
-## 5. CORE MODULES
-
-### 5.1 Authentication Module
-
-**Features:**
-- Email/password login
-- Phone + OTP login
-- PIN quick login (for staff)
-- Session management
-- Role-based access
-
-**Files:**
-```
-features/auth/
-├── LoginPage.tsx
-├── components/
-│   ├── EmailLoginForm.tsx
-│   ├── PhoneLoginForm.tsx
-│   └── PinPad.tsx
-└── hooks/
-    └── useAuth.ts
+packages/ui/
+├── src/
+│   ├── components/
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── Input.tsx
+│   │   ├── Modal.tsx
+│   │   ├── DataTable.tsx
+│   │   └── ...
+│   ├── hooks/
+│   │   └── useToast.ts
+│   └── index.ts
+└── package.json
 ```
 
-### 5.2 POS Module
-
-**Features:**
-- Product search/scan
-- Shopping cart
-- Customer selection
-- Payment processing
-- Receipt printing
-
-**Files:**
+#### packages/utils
 ```
-features/pos/
-├── POSPage.tsx
-├── components/
-│   ├── ProductGrid.tsx
-│   ├── Cart.tsx
-│   ├── CustomerSearch.tsx
-│   ├── PaymentModal.tsx
-│   └── Receipt.tsx
-└── hooks/
-    └── useCart.ts
-```
-
-### 5.3 Inventory Module
-
-**Features:**
-- Product CRUD
-- Category management
-- Stock levels
-- Stock adjustments
-- Low stock alerts
-
-**Files:**
-```
-features/inventory/
-├── ProductsPage.tsx
-├── CategoriesPage.tsx
-├── StockPage.tsx
-├── components/
-│   ├── ProductForm.tsx
-│   ├── ProductTable.tsx
-│   ├── CategoryForm.tsx
-│   ├── StockAdjustmentModal.tsx
-│   └── LowStockAlert.tsx
-└── hooks/
-    ├── useProducts.ts
-    └── useStock.ts
-```
-
-### 5.4 Customers Module
-
-**Features:**
-- Customer CRUD
-- Credit management
-- Loyalty points
-- Purchase history
-
-**Files:**
-```
-features/customers/
-├── CustomersPage.tsx
-├── CustomerDetailPage.tsx
-├── components/
-│   ├── CustomerForm.tsx
-│   ├── CustomerTable.tsx
-│   ├── CreditHistory.tsx
-│   └── PurchaseHistory.tsx
-└── hooks/
-    └── useCustomers.ts
-```
-
-### 5.5 Sales Module
-
-**Features:**
-- Sales history
-- Sale details
-- Refunds/voids
-- Export
-
-**Files:**
-```
-features/sales/
-├── SalesPage.tsx
-├── SaleDetailPage.tsx
-├── components/
-│   ├── SalesTable.tsx
-│   ├── SaleReceipt.tsx
-│   └── RefundModal.tsx
-└── hooks/
-    └── useSales.ts
-```
-
-### 5.6 Reports Module
-
-**Features:**
-- Daily summary
-- Sales reports
-- Inventory reports
-- Profit reports
-
-**Files:**
-```
-features/reports/
-├── DashboardPage.tsx
-├── SalesReportPage.tsx
-├── InventoryReportPage.tsx
-├── components/
-│   ├── SalesSummaryCard.tsx
-│   ├── SalesChart.tsx
-│   ├── TopProductsTable.tsx
-│   └── DateRangePicker.tsx
-└── hooks/
-    └── useReports.ts
+packages/utils/
+├── src/
+│   ├── currency.ts      # formatCurrency()
+│   ├── date.ts          # formatDate(), timeAgo()
+│   ├── phone.ts         # formatPhone(), validatePhone()
+│   ├── validation.ts    # Zod schemas
+│   └── index.ts
+└── package.json
 ```
 
 ---
 
-## 6. DEVELOPMENT PHASES
+## 8. CORE MODULES BY APP
 
-### Phase 1: Foundation (Week 1-2)
+### 8.1 📱 POS App Modules
 
-| Task | Priority | Est. Time |
-|------|----------|-----------|
-| Setup Vite + React + TypeScript | HIGH | 1 day |
-| Setup TailwindCSS + Shadcn/ui | HIGH | 1 day |
-| Setup Supabase project | HIGH | 1 day |
-| Create database schema | HIGH | 2 days |
-| Setup authentication | HIGH | 2 days |
-| Basic routing | HIGH | 1 day |
-| Basic layout | HIGH | 1 day |
+| Module | Features | Priority |
+|--------|----------|----------|
+| **Auth** | Login, PIN, country selection | Phase 1 |
+| **Dashboard** | Stats, charts, quick actions | Phase 1 |
+| **POS** | Checkout, cart, payments, receipts | Phase 1 |
+| **Products** | CRUD, categories, variants | Phase 1 |
+| **Stock** | Levels, adjustments, transfers | Phase 1 |
+| **Customers** | CRUD, credit, loyalty | Phase 1 |
+| **Sales** | History, details, voids | Phase 1 |
+| **Reports** | Sales, inventory, profit | Phase 2 |
+| **Orders** | Online orders management | Phase 2 |
+| **Settings** | Store, staff, integrations | Phase 2 |
 
-### Phase 2: Inventory (Week 3-4)
+### 8.2 🚚 Delivery Dashboard Modules
 
-| Task | Priority | Est. Time |
-|------|----------|-----------|
-| Products CRUD | HIGH | 3 days |
-| Categories CRUD | HIGH | 1 day |
-| Stock levels | HIGH | 2 days |
-| Stock adjustments | HIGH | 2 days |
-| Product images | MEDIUM | 1 day |
+| Module | Features | Priority |
+|--------|----------|----------|
+| **Dashboard** | Active deliveries, rider map | Phase 2 |
+| **Riders** | CRUD, status, performance | Phase 2 |
+| **Assignments** | Assign orders to riders | Phase 2 |
+| **Tracking** | Live map, ETA | Phase 2 |
+| **Zones** | Delivery area management | Phase 2 |
+| **Reports** | Delivery metrics, earnings | Phase 3 |
 
-### Phase 3: POS (Week 5-6)
+### 8.3 🌐 Vendor Portal Modules
 
-| Task | Priority | Est. Time |
-|------|----------|-----------|
-| Product search | HIGH | 1 day |
-| Shopping cart | HIGH | 2 days |
-| Customer selection | HIGH | 1 day |
-| Payment processing | HIGH | 2 days |
-| Receipt printing | HIGH | 2 days |
-| Hold/recall | MEDIUM | 1 day |
+| Module | Features | Priority |
+|--------|----------|----------|
+| **Catalog** | Product browsing, search | Phase 2 |
+| **Cart** | Add/remove, quantities | Phase 2 |
+| **Checkout** | Order placement, payment | Phase 2 |
+| **Orders** | Order tracking, history | Phase 2 |
+| **Account** | Profile, addresses | Phase 2 |
 
-### Phase 4: Customers & Sales (Week 7-8)
+### 8.4 👑 Admin Portal Modules
 
-| Task | Priority | Est. Time |
-|------|----------|-----------|
-| Customers CRUD | HIGH | 2 days |
-| Sales history | HIGH | 2 days |
-| Sale details | HIGH | 1 day |
-| Basic reports | HIGH | 3 days |
-| Dashboard | HIGH | 2 days |
-
-### Phase 5: Offline & Polish (Week 9-10)
-
-| Task | Priority | Est. Time |
-|------|----------|-----------|
-| IndexedDB setup | HIGH | 2 days |
-| Sync logic | HIGH | 3 days |
-| Error handling | HIGH | 2 days |
-| Loading states | HIGH | 1 day |
-| PWA setup | MEDIUM | 1 day |
-| Testing | HIGH | 3 days |
+| Module | Features | Priority |
+|--------|----------|----------|
+| **Dashboard** | Platform metrics | Phase 3 |
+| **Tenants** | All businesses, details | Phase 3 |
+| **Subscriptions** | Plans, billing, revenue | Phase 3 |
+| **Support** | Tickets, chat | Phase 3 |
+| **Analytics** | Platform-wide reports | Phase 3 |
+| **System** | Health, logs, config | Phase 3 |
 
 ---
 
-## 7. API DESIGN
+## 9. DEVELOPMENT PHASES
 
-### 7.1 Query Pattern
+### Phase 1: Core POS (Weeks 1-6)
+**Goal:** Fully functional POS for a single store
+
+| Week | Focus | Deliverables |
+|------|-------|--------------|
+| 1 | Setup | Monorepo, Supabase, auth with country selection |
+| 2 | Products | Product CRUD, categories, images |
+| 3 | Inventory | Stock levels, adjustments |
+| 4 | POS | Checkout flow, cart, payments |
+| 5 | Sales | Sales history, receipts, voids |
+| 6 | Customers | Customer CRUD, credit, basic loyalty |
+
+### Phase 2: Online & Delivery (Weeks 7-12)
+**Goal:** Online ordering and delivery management
+
+| Week | Focus | Deliverables |
+|------|-------|--------------|
+| 7 | Portal - Catalog | Product browsing, search, filters |
+| 8 | Portal - Checkout | Cart, checkout, order placement |
+| 9 | POS - Orders | Order management, notifications |
+| 10 | Delivery - Riders | Rider management, status |
+| 11 | Delivery - Tracking | Assignment, live tracking |
+| 12 | Integration | WhatsApp notifications, SMS |
+
+### Phase 3: Admin & Polish (Weeks 13-16)
+**Goal:** Platform management and refinement
+
+| Week | Focus | Deliverables |
+|------|-------|--------------|
+| 13 | Admin - Tenants | Tenant management, onboarding |
+| 14 | Admin - Billing | Subscriptions, payments |
+| 15 | Reports | Advanced reports across all apps |
+| 16 | Polish | Bug fixes, performance, testing |
+
+---
+
+## 10. API DESIGN
+
+### 10.1 API Layer Pattern
 
 ```typescript
 // api/products.ts
 import { supabase } from '@/lib/supabase';
-import type { Product } from '@/types';
+import type { Product, CreateProductInput } from '@/types';
 
 export const productsApi = {
-  // Get all products for tenant
-  getAll: async (tenantId: string): Promise<Product[]> => {
-    const { data, error } = await supabase
+  list: async (tenantId: string, filters?: ProductFilters) => {
+    let query = supabase
       .from('products')
       .select('*, category:categories(id, name)')
       .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('name');
+      .eq('is_active', true);
     
+    if (filters?.categoryId) {
+      query = query.eq('category_id', filters.categoryId);
+    }
+    
+    if (filters?.search) {
+      query = query.ilike('name', `%${filters.search}%`);
+    }
+    
+    const { data, error } = await query.order('name');
     if (error) throw error;
-    return data;
+    return data as Product[];
   },
-  
-  // Get single product
-  getById: async (id: string): Promise<Product | null> => {
+
+  get: async (id: string) => {
     const { data, error } = await supabase
       .from('products')
       .select('*, category:categories(id, name)')
@@ -742,36 +1476,33 @@ export const productsApi = {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as Product;
   },
-  
-  // Create product
-  create: async (product: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
+
+  create: async (input: CreateProductInput) => {
     const { data, error } = await supabase
       .from('products')
-      .insert(product)
+      .insert(input)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    return data as Product;
   },
-  
-  // Update product
-  update: async (id: string, updates: Partial<Product>): Promise<Product> => {
+
+  update: async (id: string, input: Partial<Product>) => {
     const { data, error } = await supabase
       .from('products')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...input, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    return data as Product;
   },
-  
-  // Delete (soft delete)
-  delete: async (id: string): Promise<void> => {
+
+  delete: async (id: string) => {
     const { error } = await supabase
       .from('products')
       .update({ is_active: false })
@@ -782,30 +1513,22 @@ export const productsApi = {
 };
 ```
 
-### 7.2 React Query Pattern
+### 10.2 React Query Hooks
 
 ```typescript
 // hooks/useProducts.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '@/api/products';
 import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 
-export function useProducts() {
+export function useProducts(filters?: ProductFilters) {
   const { tenantId } = useAuth();
   
   return useQuery({
-    queryKey: ['products', tenantId],
-    queryFn: () => productsApi.getAll(tenantId),
+    queryKey: ['products', tenantId, filters],
+    queryFn: () => productsApi.list(tenantId, filters),
     enabled: !!tenantId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
-
-export function useProduct(id: string) {
-  return useQuery({
-    queryKey: ['products', id],
-    queryFn: () => productsApi.getById(id),
-    enabled: !!id,
   });
 }
 
@@ -817,6 +1540,10 @@ export function useCreateProduct() {
     mutationFn: productsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+      toast.success('Product created successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to create product: ${error.message}`);
     },
   });
 }
@@ -824,186 +1551,320 @@ export function useCreateProduct() {
 
 ---
 
-## 8. AUTHENTICATION STRATEGY
+## 11. AUTHENTICATION STRATEGY
 
-### 8.1 Auth Flow
+### 11.1 Registration Flow
 
 ```
-1. User enters email/phone
-2. If email → password login
-3. If phone → send OTP
-4. On success → fetch tenant & user data
-5. Store in Zustand + localStorage
-6. Redirect to dashboard
+┌─────────────────────────────────────────────────────────────────┐
+│                      REGISTRATION FLOW                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. SELECT COUNTRY                                              │
+│     ┌─────────────┐  ┌─────────────┐                           │
+│     │  🇬🇭 Ghana   │  │  🇳🇬 Nigeria │                           │
+│     └─────────────┘  └─────────────┘                           │
+│                          │                                       │
+│  2. ENTER PHONE NUMBER   ▼                                       │
+│     ┌─────────────────────────────┐                             │
+│     │ +233 │ 024 XXX XXXX         │                             │
+│     └─────────────────────────────┘                             │
+│                          │                                       │
+│  3. VERIFY OTP           ▼                                       │
+│     ┌─────────────────────────────┐                             │
+│     │    ○ ○ ○ ○ ○ ○              │ ← SMS via mNotify/Termii   │
+│     └─────────────────────────────┘                             │
+│                          │                                       │
+│  4. BUSINESS DETAILS     ▼                                       │
+│     ┌─────────────────────────────┐                             │
+│     │ Business Name: _________    │                             │
+│     │ Your Name: _____________    │                             │
+│     │ Email (optional): _____     │                             │
+│     │ Create PIN: ○ ○ ○ ○        │                             │
+│     └─────────────────────────────┘                             │
+│                          │                                       │
+│  5. WELCOME!             ▼                                       │
+│     🎉 Account created                                          │
+│     → Go to Dashboard                                           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 8.2 Auth Store
+### 11.2 Login Options
 
 ```typescript
-// stores/authStore.ts
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-interface AuthState {
-  user: User | null;
-  tenant: Tenant | null;
-  isAuthenticated: boolean;
-  login: (user: User, tenant: Tenant) => void;
-  logout: () => void;
+// 1. Phone + OTP (Primary)
+async function loginWithPhone(country: 'GH' | 'NG', phone: string) {
+  // Send OTP via mNotify (GH) or Termii (NG)
+  const otp = await sendOTP(country, phone);
+  // Store OTP in database with expiry
+  await storeOTP(phone, otp);
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      tenant: null,
-      isAuthenticated: false,
-      login: (user, tenant) => set({ user, tenant, isAuthenticated: true }),
-      logout: () => set({ user: null, tenant: null, isAuthenticated: false }),
-    }),
-    { name: 'auth-storage' }
-  )
-);
-```
-
----
-
-## 9. OFFLINE-FIRST STRATEGY
-
-### 9.1 Principles
-
-1. **Read from local (IndexedDB) first**
-2. **Write to local first, then sync to cloud**
-3. **Queue failed syncs for retry**
-4. **Show sync status to user**
-
-### 9.2 Sync Flow
-
-```
-User creates sale:
-1. Save to IndexedDB immediately
-2. Add to sync queue
-3. Show success to user
-4. In background, push to Supabase
-5. If fails, retry up to 3 times
-6. If still fails, mark as failed and alert user
-```
-
-### 9.3 Simplified Sync Code
-
-```typescript
-// lib/sync.ts
-export async function syncToCloud(item: SyncQueueItem): Promise<void> {
-  const { table_name, operation, data, record_id } = item;
+// 2. PIN Login (Quick - for staff)
+async function loginWithPIN(phone: string, pin: string) {
+  const { data: user } = await supabase
+    .from('users')
+    .select('*')
+    .eq('phone', phone)
+    .single();
   
-  try {
-    if (operation === 'create' || operation === 'update') {
-      const { error } = await supabase
-        .from(table_name)
-        .upsert(data, { onConflict: 'id' });
-      
-      if (error) throw error;
-    } else if (operation === 'delete') {
-      const { error } = await supabase
-        .from(table_name)
-        .delete()
-        .eq('id', record_id);
-      
-      if (error) throw error;
-    }
-    
-    // Remove from queue on success
-    await db.syncQueue.delete(item.id);
-    
-  } catch (error) {
-    // Increment retry count
-    await db.syncQueue.update(item.id, {
-      retries: item.retries + 1,
-      last_error: error.message,
-    });
-    
-    // Mark as failed after 3 retries
-    if (item.retries >= 3) {
-      await db.syncQueue.update(item.id, { status: 'failed' });
-    }
-    
-    throw error;
+  if (await verifyPIN(pin, user.pin_hash)) {
+    return createSession(user);
   }
 }
+
+// 3. Email + Password (Optional)
+async function loginWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  return data;
+}
 ```
 
 ---
 
-## 10. TESTING STRATEGY
+## 12. INTEGRATIONS
 
-### 10.1 Test Types
+### 12.1 Payment Processing (Paystack)
 
-| Type | Coverage | Tools |
-|------|----------|-------|
-| Unit Tests | Business logic | Vitest |
-| Component Tests | UI components | React Testing Library |
-| E2E Tests | Critical flows | Playwright |
+```typescript
+// lib/payment/paystack.ts
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-### 10.2 Critical Paths to Test
+export async function initializePayment(params: {
+  email: string;
+  amount: number; // in kobo/pesewas
+  currency: 'GHS' | 'NGN';
+  reference: string;
+  metadata?: Record<string, any>;
+}) {
+  const response = await fetch('https://api.paystack.co/transaction/initialize', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: params.email,
+      amount: params.amount,
+      currency: params.currency,
+      reference: params.reference,
+      metadata: params.metadata,
+      callback_url: `${process.env.APP_URL}/payment/callback`,
+    }),
+  });
+  
+  return response.json();
+}
 
-1. ✅ User login flow
-2. ✅ Create product
-3. ✅ POS checkout flow
-4. ✅ Sale with multiple items
-5. ✅ Apply discount
-6. ✅ Process payment
-7. ✅ Print receipt
-8. ✅ Void sale
-9. ✅ Offline sync
+export async function verifyPayment(reference: string) {
+  const response = await fetch(
+    `https://api.paystack.co/transaction/verify/${reference}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+      },
+    }
+  );
+  
+  return response.json();
+}
+```
+
+### 12.2 Mobile Money
+
+```typescript
+// Ghana Mobile Money via Paystack
+export async function chargeMobileMoney(params: {
+  phone: string;
+  provider: 'mtn' | 'vodafone' | 'airteltigo';
+  amount: number;
+  reference: string;
+}) {
+  const response = await fetch('https://api.paystack.co/charge', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: params.amount,
+      email: 'customer@example.com',
+      currency: 'GHS',
+      mobile_money: {
+        phone: params.phone,
+        provider: params.provider,
+      },
+      reference: params.reference,
+    }),
+  });
+  
+  return response.json();
+}
+```
+
+### 12.3 WhatsApp Notifications
+
+```typescript
+// Notification types
+const WHATSAPP_TEMPLATES = {
+  order_confirmation: {
+    name: 'order_confirmation',
+    params: ['customer_name', 'order_number', 'total', 'store_name'],
+  },
+  order_ready: {
+    name: 'order_ready_pickup',
+    params: ['customer_name', 'order_number', 'store_address'],
+  },
+  delivery_started: {
+    name: 'delivery_on_the_way',
+    params: ['customer_name', 'rider_name', 'eta_minutes'],
+  },
+  delivery_completed: {
+    name: 'delivery_completed',
+    params: ['customer_name', 'order_number'],
+  },
+};
+
+// Send notification
+export async function sendOrderConfirmation(order: Order) {
+  await sendWhatsAppMessage(order.customer_phone, 'order_confirmation', {
+    customer_name: order.customer_name,
+    order_number: order.order_number,
+    total: formatCurrency(order.total, order.tenant.country),
+    store_name: order.store.name,
+  });
+}
+```
 
 ---
 
-## 11. DEPLOYMENT STRATEGY
+## 13. OFFLINE-FIRST STRATEGY
 
-### 11.1 Environments
+### 13.1 Which Apps Need Offline?
 
-| Environment | URL | Purpose |
-|-------------|-----|---------|
-| Development | localhost:5173 | Local development |
-| Staging | staging.warehousepos.com | Pre-production testing |
-| Production | app.warehousepos.com | Live users |
+| App | Offline Support | Reason |
+|-----|-----------------|--------|
+| **POS App** | ✅ Full | Must work during internet outage |
+| **Delivery Dashboard** | ⚠️ Partial | Needs real-time, but cache recent |
+| **Vendor Portal** | ❌ No | Requires internet for orders |
+| **Admin Portal** | ❌ No | Admin tasks need real-time data |
 
-### 11.2 CI/CD Pipeline
+### 13.2 POS Offline Architecture
 
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run test
-      - run: npm run build
-      - run: npm run deploy
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│                    POS OFFLINE ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │                      REACT APP                           │   │
+│   │                          │                               │   │
+│   │   ┌──────────────────────┴──────────────────────────┐   │   │
+│   │   │              TanStack Query                      │   │   │
+│   │   │    (Manages server state, caches responses)      │   │   │
+│   │   └──────────────────────┬──────────────────────────┘   │   │
+│   │                          │                               │   │
+│   │   ┌──────────────────────┼──────────────────────────┐   │   │
+│   │   │                      │                          │   │   │
+│   │   ▼                      ▼                          ▼   │   │
+│   │ ┌──────────┐      ┌──────────────┐      ┌──────────┐   │   │
+│   │ │ DEXIE.JS │◄────►│  SYNC ENGINE │◄────►│ SUPABASE │   │   │
+│   │ │(IndexedDB)│      │              │      │  (Cloud) │   │   │
+│   │ │          │      │ • Queue ops  │      │          │   │   │
+│   │ │ • Products│      │ • Retry fail │      │ • Auth   │   │   │
+│   │ │ • Sales   │      │ • Conflict   │      │ • Sync   │   │   │
+│   │ │ • Stock   │      │   resolution │      │ • Backup │   │   │
+│   │ │ • Customers│      │              │      │          │   │   │
+│   │ └──────────┘      └──────────────┘      └──────────┘   │   │
+│   │                                                          │   │
+│   └─────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│   OFFLINE BEHAVIOR:                                             │
+│   ✓ All reads from IndexedDB (instant)                         │
+│   ✓ Writes go to IndexedDB + sync queue                        │
+│   ✓ Sync queue processes when online                           │
+│   ✓ Uses UPSERT to handle conflicts                            │
+│   ✓ Shows sync status indicator                                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.3 Sync Rules
+
+```typescript
+// ALWAYS use upsert (never insert)
+const { error } = await supabase
+  .from('sales')
+  .upsert(sale, { onConflict: 'id' });
+
+// Max 3 retries, then move to failed queue
+if (item.retries >= 3) {
+  await markAsFailed(item);
+  showUserAlert('Some data failed to sync');
+}
+
+// Conflict resolution: Last write wins
+// (For more complex scenarios, use timestamps)
+```
+
+---
+
+## 14. DEPLOYMENT STRATEGY
+
+### 14.1 Environments
+
+| Environment | URL Pattern | Purpose |
+|-------------|-------------|---------|
+| Development | localhost:5173 | Local dev |
+| Staging | staging-*.warehousepos.com | Testing |
+| Production | *.warehousepos.com | Live |
+
+### 14.2 URLs
+
+| App | Production URL |
+|-----|----------------|
+| Marketing | warehousepos.com |
+| POS App | app.warehousepos.com |
+| Delivery | delivery.warehousepos.com |
+| Vendor Portal | {slug}.warehousepos.com |
+| Admin | admin.warehousepos.com |
+
+### 14.3 Hosting
+
+| Service | Used For |
+|---------|----------|
+| Vercel | All frontend apps |
+| Supabase | Backend, database, auth |
+| Cloudinary | Image storage & optimization |
+| Sentry | Error monitoring |
 
 ---
 
 ## 📋 NEXT STEPS
 
-1. [ ] Review this plan and approve
-2. [ ] Create GitHub repo for WarehousePOS
-3. [ ] Setup Supabase project
-4. [ ] Create initial database migration
-5. [ ] Setup frontend project
-6. [ ] Begin Phase 1 development
+1. [ ] Review and approve this plan
+2. [ ] Create new GitHub repository
+3. [ ] Setup Supabase project with country config
+4. [ ] Create monorepo structure
+5. [ ] Implement shared UI components
+6. [ ] Begin Phase 1: POS App core
 
 ---
 
-> **Document maintained by:** Development Team  
-> **Last updated:** January 27, 2026
+## 📝 APPROVAL
+
+| Role | Name | Date | Approved |
+|------|------|------|----------|
+| Product Owner | | | [ ] |
+| Tech Lead | | | [ ] |
+| Developer | | | [ ] |
+
+---
+
+> **Document Version:** 2.0  
+> **Last Updated:** January 27, 2026  
+> **Next Review:** Before Phase 1 kickoff
