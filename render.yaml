@@ -1,0 +1,95 @@
+# Render Blueprint for WarehousePOS
+# Deploy with: render blueprint apply
+
+services:
+  # POS App - Main business application
+  - type: web
+    name: warehousepos-app
+    runtime: static
+    buildCommand: cd apps/pos && pnpm install && pnpm build
+    staticPublishPath: apps/pos/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_MNOTIFY_API_KEY
+        sync: false
+      - key: VITE_MNOTIFY_SENDER_ID
+        value: WarehousePS
+      - key: VITE_SENTRY_DSN
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Admin Portal - Platform administration
+  - type: web
+    name: warehousepos-admin
+    runtime: static
+    buildCommand: cd apps/admin && pnpm install && pnpm build
+    staticPublishPath: apps/admin/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Delivery Dashboard - Fleet management
+  - type: web
+    name: warehousepos-delivery
+    runtime: static
+    buildCommand: cd apps/delivery && pnpm install && pnpm build
+    staticPublishPath: apps/delivery/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Vendor Portal - Customer-facing storefront
+  - type: web
+    name: warehousepos-portal
+    runtime: static
+    buildCommand: cd apps/portal && pnpm install && pnpm build
+    staticPublishPath: apps/portal/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Marketing Site - Landing pages
+  - type: web
+    name: warehousepos-marketing
+    runtime: static
+    buildCommand: cd apps/marketing && pnpm install && pnpm build
+    staticPublishPath: apps/marketing/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

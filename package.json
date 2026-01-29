@@ -1,0 +1,40 @@
+{
+  "name": "warehousepos",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Cloud-based POS system for Ghana & Nigeria",
+  "author": "WarehousePOS Team",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev:pos": "pnpm --filter @warehousepos/pos dev",
+    "dev:delivery": "pnpm --filter @warehousepos/delivery dev",
+    "dev:portal": "pnpm --filter @warehousepos/portal dev",
+    "dev:admin": "pnpm --filter @warehousepos/admin dev",
+    "dev:marketing": "pnpm --filter @warehousepos/marketing dev",
+    "build:pos": "pnpm --filter @warehousepos/pos build",
+    "build:delivery": "pnpm --filter @warehousepos/delivery build",
+    "build:portal": "pnpm --filter @warehousepos/portal build",
+    "build:admin": "pnpm --filter @warehousepos/admin build",
+    "build:all": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "clean": "pnpm -r clean",
+    "db:gen-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/types/src/database.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.12.0",
+  "dependencies": {
+    "@sentry/react": "^10.37.0",
+    "@supabase/supabase-js": "^2.93.1",
+    "pg": "^8.17.2"
+  }
+}

@@ -8,12 +8,12 @@
 
 WarehousePOS is a comprehensive business management ecosystem consisting of **4 interconnected applications**:
 
-| App | Purpose | Users |
-|-----|---------|-------|
-| 📱 **POS App** | Point of Sale & Business Management | Vendors, Cashiers |
-| 🚚 **Delivery Dashboard** | Delivery & Rider Management | Fleet Managers, Riders |
-| 🌐 **Vendor Portal** | Online Storefront | Customers |
-| 👑 **Admin Portal** | Platform Management | WarehousePOS Admins |
+| App                       | Purpose                             | Users                  |
+| ------------------------- | ----------------------------------- | ---------------------- |
+| 📱 **POS App**            | Point of Sale & Business Management | Vendors, Cashiers      |
+| 🚚 **Delivery Dashboard** | Delivery & Rider Management         | Fleet Managers, Riders |
+| 🌐 **Vendor Portal**      | Online Storefront                   | Customers              |
+| 👑 **Admin Portal**       | Platform Management                 | WarehousePOS Admins    |
 
 ---
 
@@ -21,23 +21,23 @@ WarehousePOS is a comprehensive business management ecosystem consisting of **4 
 
 Built specifically for Ghanaian and Nigerian businesses:
 
-| Feature | 🇬🇭 Ghana | 🇳🇬 Nigeria |
-|---------|-----------|-------------|
-| Currency | GHS (₵) | NGN (₦) |
-| SMS Provider | mNotify | Termii |
+| Feature      | 🇬🇭 Ghana                | 🇳🇬 Nigeria    |
+| ------------ | ----------------------- | ------------- |
+| Currency     | GHS (₵)                 | NGN (₦)       |
+| SMS Provider | mNotify                 | Termii        |
 | Mobile Money | MTN MoMo, Vodafone Cash | OPay, PalmPay |
-| Payments | Paystack | Paystack |
+| Payments     | Paystack                | Paystack      |
 
 ---
 
 ## 📋 Project Status
 
-| Phase | Description | Status | Target |
-|-------|-------------|--------|--------|
-| 0 | Planning & Documentation | ✅ Complete | Jan 2026 |
-| 1 | Core POS App | 🔄 Starting | Feb-Mar 2026 |
-| 2 | Online Portal & Delivery | ⏳ Planned | Apr-May 2026 |
-| 3 | Admin Portal & Polish | ⏳ Planned | Jun 2026 |
+| Phase | Description              | Status      | Target       |
+| ----- | ------------------------ | ----------- | ------------ |
+| 0     | Planning & Documentation | ✅ Complete | Jan 2026     |
+| 1     | Core POS App             | 🔄 Starting | Feb-Mar 2026 |
+| 2     | Online Portal & Delivery | ⏳ Planned  | Apr-May 2026 |
+| 3     | Admin Portal & Polish    | ⏳ Planned  | Jun 2026     |
 
 ---
 
@@ -70,16 +70,16 @@ WarehousePOS/
 
 ## 🛠️ Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| Frontend | React 19, TypeScript, Vite |
-| Styling | TailwindCSS, Shadcn/ui, Framer Motion |
-| State | TanStack Query, Zustand |
-| Offline | Dexie.js (IndexedDB) |
-| Backend | Supabase (PostgreSQL) |
-| Payments | Paystack |
-| SMS | mNotify (🇬🇭), Termii (🇳🇬) |
-| Notifications | WhatsApp Business API |
+| Category      | Technology                            |
+| ------------- | ------------------------------------- |
+| Frontend      | React 19, TypeScript, Vite            |
+| Styling       | TailwindCSS, Shadcn/ui, Framer Motion |
+| State         | TanStack Query, Zustand               |
+| Offline       | Dexie.js (IndexedDB)                  |
+| Backend       | Supabase (PostgreSQL)                 |
+| Payments      | Paystack                              |
+| SMS           | mNotify (🇬🇭), Termii (🇳🇬)             |
+| Notifications | WhatsApp Business API                 |
 
 ---
 
@@ -101,16 +101,16 @@ npm run dev
 
 ### POS Application
 
-*Coming soon - Phase 1*
+_Coming soon - Phase 1_
 
 ---
 
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [REBUILD_PLAN.md](./docs/REBUILD_PLAN.md) | Complete roadmap, architecture, database schema |
-| [LESSONS_LEARNED.md](./docs/LESSONS_LEARNED_AND_CAUTIONS.md) | Mistakes to avoid from old system |
+| Document                                                     | Description                                     |
+| ------------------------------------------------------------ | ----------------------------------------------- |
+| [REBUILD_PLAN.md](./docs/REBUILD_PLAN.md)                    | Complete roadmap, architecture, database schema |
+| [LESSONS_LEARNED.md](./docs/LESSONS_LEARNED_AND_CAUTIONS.md) | Mistakes to avoid from old system               |
 
 ---
 

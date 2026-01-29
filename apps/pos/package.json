@@ -1,0 +1,47 @@
+{
+  "name": "@warehousepos/pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@sentry/react": "^10.37.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "@tanstack/react-query": "^5.17.0",
+    "@warehousepos/config": "workspace:*",
+    "@warehousepos/types": "workspace:*",
+    "@warehousepos/ui": "workspace:*",
+    "@warehousepos/utils": "workspace:*",
+    "dexie": "^3.2.4",
+    "dexie-react-hooks": "^1.1.6",
+    "framer-motion": "^10.18.0",
+    "lucide-react": "^0.303.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.0",
+    "react-router-dom": "^6.21.0",
+    "recharts": "^2.10.0",
+    "sonner": "^1.3.1",
+    "zod": "^3.22.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}

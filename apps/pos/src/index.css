@@ -1,0 +1,614 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   WAREHOUSEPOS DESIGN SYSTEM
+   🇬🇭 Ghana Theme: Gold & Black (Luxurious)
+   🇳🇬 Nigeria Theme: Green & Black (Bold)
+   ============================================ */
+
+/* PWA Safe Area Support */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+@layer base {
+  /* ===========================================
+     DEFAULT THEME (Ghana - Gold & Black)
+     =========================================== */
+  :root {
+    /* Base Colors */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    
+    /* Cards & Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    
+    /* Primary - Ghana Gold */
+    --primary: 43 75% 52%;
+    --primary-foreground: 0 0% 10%;
+    
+    /* Secondary */
+    --secondary: 43 30% 95%;
+    --secondary-foreground: 0 0% 10%;
+    
+    /* Muted */
+    --muted: 43 20% 96%;
+    --muted-foreground: 0 0% 45%;
+    
+    /* Accent */
+    --accent: 43 75% 52%;
+    --accent-foreground: 0 0% 10%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders & Inputs */
+    --border: 43 20% 90%;
+    --input: 43 20% 90%;
+    --ring: 43 75% 52%;
+    
+    /* Radius */
+    --radius: 0.75rem;
+    
+    /* Country Accent Colors */
+    --country-primary: 43 75% 52%;
+    --country-primary-rgb: 212, 175, 55;
+  }
+
+  /* ===========================================
+     DARK MODE (Gold & Black - Luxurious Dark)
+     =========================================== */
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 43 20% 95%;
+    
+    --card: 0 0% 10%;
+    --card-foreground: 43 20% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 43 20% 95%;
+    
+    --primary: 43 75% 52%;
+    --primary-foreground: 0 0% 10%;
+    
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 43 20% 95%;
+    
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    
+    --accent: 43 75% 45%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 43 75% 52%;
+  }
+
+  /* ===========================================
+     NIGERIA THEME (Green & Black)
+     =========================================== */
+  .theme-nigeria {
+    --primary: 153 100% 27%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 153 100% 27%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 153 100% 27%;
+    --country-primary: 153 100% 27%;
+    --country-primary-rgb: 0, 135, 81;
+    
+    --secondary: 153 30% 95%;
+    --muted: 153 20% 96%;
+    --border: 153 20% 90%;
+    --input: 153 20% 90%;
+  }
+
+  .theme-nigeria.dark {
+    --primary: 153 100% 35%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 153 100% 30%;
+    --secondary: 153 10% 15%;
+    --muted: 153 10% 15%;
+    --border: 153 10% 20%;
+    --input: 153 10% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  
+  /* Better focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+  
+  /* Selection colors */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+
+@layer components {
+  /* Premium Glass Card Effect */
+  .glass-card {
+    @apply bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10;
+  }
+  
+  /* Country-specific gradient backgrounds */
+  .bg-gradient-ghana {
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.1) 0%, 
+      rgba(212, 175, 55, 0.05) 50%, 
+      transparent 100%
+    );
+  }
+  
+  .bg-gradient-nigeria {
+    background: linear-gradient(135deg, 
+      rgba(0, 135, 81, 0.1) 0%, 
+      rgba(0, 135, 81, 0.05) 50%, 
+      transparent 100%
+    );
+  }
+  
+  /* Premium Button Styles */
+  .btn-primary {
+    @apply relative overflow-hidden bg-primary text-primary-foreground font-semibold 
+           px-6 py-3 rounded-xl transition-all duration-300 ease-out
+           hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+  
+  .btn-primary::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 translate-y-full transition-transform duration-300;
+  }
+  
+  .btn-primary:hover::before {
+    @apply translate-y-0;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground font-medium 
+           px-6 py-3 rounded-xl border border-border transition-all duration-200
+           hover:bg-secondary/80 active:scale-[0.98];
+  }
+  
+  .btn-ghost {
+    @apply text-foreground font-medium px-4 py-2 rounded-lg transition-colors
+           hover:bg-muted active:bg-muted/80;
+  }
+  
+  /* Premium Card Styles */
+  .card-premium {
+    @apply bg-card rounded-2xl border border-border/50 
+           shadow-elegant transition-all duration-300
+           hover:shadow-card-hover hover:border-primary/20;
+  }
+  
+  .card-interactive {
+    @apply card-premium cursor-pointer
+           hover:-translate-y-1 hover:shadow-xl;
+  }
+  
+  /* Stat Card with Glow */
+  .stat-card {
+    @apply relative bg-card rounded-2xl p-6 border border-border/50
+           overflow-hidden transition-all duration-300;
+  }
+  
+  .stat-card::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50;
+  }
+  
+  .stat-card:hover {
+    @apply shadow-lg border-primary/30;
+  }
+  
+  /* Input Styles */
+  .input-premium {
+    @apply w-full px-4 py-3 rounded-xl border border-border bg-background
+           transition-all duration-200 placeholder:text-muted-foreground
+           focus:border-primary focus:ring-2 focus:ring-primary/20;
+  }
+  
+  /* Badge Styles */
+  .badge-primary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+           bg-primary/10 text-primary;
+  }
+  
+  .badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+           bg-success-50 text-success-600;
+  }
+  
+  .badge-warning {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+           bg-warning-50 text-warning-600;
+  }
+  
+  .badge-error {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+           bg-error-50 text-error-600;
+  }
+  
+  /* Navigation Item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground
+           transition-all duration-200 hover:bg-muted hover:text-foreground;
+  }
+  
+  .nav-item.active {
+    @apply bg-primary/10 text-primary font-medium;
+  }
+  
+  /* Table Styles */
+  .table-premium {
+    @apply w-full border-separate border-spacing-0;
+  }
+  
+  .table-premium th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider
+           text-muted-foreground bg-muted/50 first:rounded-tl-lg last:rounded-tr-lg;
+  }
+  
+  .table-premium td {
+    @apply px-4 py-4 border-b border-border/50;
+  }
+  
+  .table-premium tr:hover td {
+    @apply bg-muted/30;
+  }
+  
+  /* Sidebar Styles */
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-card border-r border-border
+           flex flex-col z-40 transition-transform duration-300;
+  }
+  
+  .sidebar-collapsed {
+    @apply w-20;
+  }
+  
+  /* Header Styles */
+  .header-premium {
+    @apply sticky top-0 z-30 flex items-center justify-between px-6 py-4
+           bg-background/80 backdrop-blur-xl border-b border-border/50;
+  }
+  
+  /* Modal Overlay */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 
+           animate-fade-in;
+  }
+  
+  .modal-content {
+    @apply bg-card rounded-2xl shadow-2xl border border-border/50
+           animate-scale-in;
+  }
+  
+  /* Loading Skeleton */
+  .skeleton {
+    @apply relative overflow-hidden bg-muted rounded-lg;
+  }
+  
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 bg-shimmer animate-shimmer;
+  }
+  
+  /* Country Flag Badge */
+  .flag-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full 
+           bg-muted text-sm font-medium;
+  }
+  
+  /* Product Grid Card */
+  .product-card {
+    @apply group relative bg-card rounded-2xl border border-border/50 overflow-hidden
+           transition-all duration-300 hover:shadow-xl hover:border-primary/30;
+  }
+  
+  .product-card-image {
+    @apply aspect-square bg-muted overflow-hidden;
+  }
+  
+  .product-card-image img {
+    @apply w-full h-full object-cover transition-transform duration-500
+           group-hover:scale-110;
+  }
+  
+  /* POS Keypad Button */
+  .keypad-btn {
+    @apply flex items-center justify-center h-14 rounded-xl text-xl font-semibold
+           bg-muted text-foreground transition-all duration-150
+           hover:bg-muted/80 active:scale-95 active:bg-primary/20;
+  }
+  
+  /* Receipt Style */
+  .receipt {
+    @apply bg-white text-black font-mono text-sm p-6 rounded-lg
+           border-2 border-dashed border-gray-300;
+  }
+  
+  /* Dashboard Widget */
+  .widget {
+    @apply bg-card rounded-2xl border border-border/50 p-6
+           hover:shadow-lg transition-shadow duration-300;
+  }
+  
+  /* Chart Container */
+  .chart-container {
+    @apply bg-card rounded-2xl border border-border/50 p-6;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-16 px-8 text-center;
+  }
+  
+  .empty-state-icon {
+    @apply w-16 h-16 mb-4 text-muted-foreground/50;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+  /* Text Gradient */
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-ghana-gold-400 via-ghana-gold-500 to-ghana-gold-600;
+  }
+  
+  .text-gradient-green {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green-400 via-nigeria-green-500 to-nigeria-green-600;
+  }
+  
+  /* Glow Effects */
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.1);
+  }
+  
+  .glow-green {
+    box-shadow: 0 0 20px rgba(0, 135, 81, 0.3), 0 0 40px rgba(0, 135, 81, 0.1);
+  }
+  
+  /* Border Gradient */
+  .border-gradient-gold {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #D4AF37, #F5E19A, #D4AF37) border-box;
+  }
+  
+  .border-gradient-green {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #008751, #00B36B, #008751) border-box;
+  }
+  
+  /* Scrollbar Styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Safe Area Padding */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+/* Touch-friendly tap targets on mobile */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    @apply py-4;
+  }
+}
+
+/* Larger screens */
+@media (min-width: 1024px) {
+  .sidebar {
+    @apply translate-x-0;
+  }
+}
+
+/* ============================================
+   PWA SAFE AREA UTILITIES
+   ============================================ */
+
+/* Safe area padding classes */
+.safe-top {
+  padding-top: var(--sat);
+}
+
+.safe-bottom {
+  padding-bottom: var(--sab);
+}
+
+.safe-left {
+  padding-left: var(--sal);
+}
+
+.safe-right {
+  padding-right: var(--sar);
+}
+
+.safe-all {
+  padding: var(--sat) var(--sar) var(--sab) var(--sal);
+}
+
+/* Safe area height utilities */
+.h-safe-top {
+  height: var(--sat);
+}
+
+.h-safe-bottom {
+  height: var(--sab);
+}
+
+.pb-safe {
+  padding-bottom: max(1.5rem, var(--sab));
+}
+
+.pt-safe {
+  padding-top: max(1rem, var(--sat));
+}
+
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  /* Extra padding for notched devices */
+  .pwa-header {
+    padding-top: calc(var(--sat) + 0.5rem);
+  }
+  
+  .pwa-footer {
+    padding-bottom: calc(var(--sab) + 0.5rem);
+  }
+  
+  /* Hide browser-specific UI hints */
+  .browser-only {
+    display: none !important;
+  }
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling for iOS */
+.scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .receipt {
+    @apply border-none shadow-none;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+/* Page Transition */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Number Counter Animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: countUp 0.5s ease-out forwards;
+}
+
+/* Ripple Effect */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.3) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ripple:active::after {
+  opacity: 1;
+}

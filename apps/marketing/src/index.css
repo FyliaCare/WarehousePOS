@@ -4,18 +4,133 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ============================================
+   WAREHOUSEPOS MARKETING - DESIGN SYSTEM
+   🇬🇭 Ghana Theme: Gold & Black (Luxurious)
+   🇳🇬 Nigeria Theme: Green & Black (Bold)
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Base Colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    
+    /* Country Accent - Ghana Gold by default */
+    --accent-primary: 43 75% 52%;
+    --accent-primary-rgb: 212, 175, 55;
+    
+    /* Semantic colors */
+    --card: 0 0% 100%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214.3 31.8% 91.4%;
+  }
+  
+  .theme-nigeria {
+    --accent-primary: 153 100% 27%;
+    --accent-primary-rgb: 0, 135, 81;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-white text-slate-900;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+@layer components {
+  /* Premium Button Styles for Marketing */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-7 py-4 text-[15px] font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98];
+  }
+  
+  .btn-primary-ghana {
+    @apply btn-primary bg-gradient-to-r from-ghana-gold-500 to-ghana-gold-600 text-black hover:from-ghana-gold-600 hover:to-ghana-gold-700;
+  }
+  
+  .btn-primary-nigeria {
+    @apply btn-primary bg-gradient-to-r from-nigeria-green-500 to-nigeria-green-600 text-white hover:from-nigeria-green-600 hover:to-nigeria-green-700;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 text-slate-700 text-[15px] font-medium rounded-xl hover:bg-slate-50 transition-colors border border-slate-200;
+  }
+  
+  /* Feature Cards */
+  .feature-card {
+    @apply p-8 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-xl transition-all duration-300;
+  }
+  
+  .feature-card-ghana {
+    @apply feature-card hover:border-ghana-gold-300 hover:shadow-ghana-gold-100/50;
+  }
+  
+  .feature-card-nigeria {
+    @apply feature-card hover:border-nigeria-green-300 hover:shadow-nigeria-green-100/50;
+  }
+  
+  /* Premium Section */
+  .section-premium {
+    @apply py-20 lg:py-28;
+  }
+  
+  /* Gradient Text */
+  .text-gradient-ghana {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-ghana-gold-500 via-ghana-gold-600 to-ghana-gold-700;
+  }
+  
+  .text-gradient-nigeria {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green-500 via-nigeria-green-600 to-nigeria-green-700;
+  }
+  
+  /* Badge */
+  .badge-ghana {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ghana-gold-50 text-ghana-gold-700 text-sm font-medium;
+  }
+  
+  .badge-nigeria {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-nigeria-green-50 text-nigeria-green-700 text-sm font-medium;
+  }
+  
+  /* Glowing border effect */
+  .glow-border-ghana {
+    @apply relative;
+    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.1), 0 0 20px rgba(212, 175, 55, 0.1);
+  }
+  
+  .glow-border-nigeria {
+    @apply relative;
+    box-shadow: 0 0 0 1px rgba(0, 135, 81, 0.1), 0 0 20px rgba(0, 135, 81, 0.1);
+  }
 }
 
-body {
-  font-family: "Inter", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Animation Keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(var(--accent-primary-rgb), 0.3); }
+  50% { box-shadow: 0 0 40px rgba(var(--accent-primary-rgb), 0.5); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
