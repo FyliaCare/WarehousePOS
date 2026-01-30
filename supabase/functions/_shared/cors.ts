@@ -15,13 +15,10 @@ const ALLOWED_ORIGINS = [
   'https://pos.warehousepos.com',
   'https://portal.warehousepos.com',
   'https://admin.warehousepos.com',
-  // Render.com deployments
-  'https://warehousepos.onrender.com',
-  'https://warehousepos-pos.onrender.com',
-  'https://warehousepos-admin.onrender.com',
-  'https://warehousepos-portal.onrender.com',
-  // Vercel deployments (if any)
+  // Vercel deployments
+  'https://warehouse-pos-zeta.vercel.app',
   'https://warehousepos.vercel.app',
+  'https://warehouse-pos.vercel.app',
 ];
 
 function getOrigin(req: Request): string {

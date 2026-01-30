@@ -99,45 +99,110 @@ serve(async (req) => {
       console.log('Found existing user:', userId);
     } else {
       // Try to create new user
-      console.log('Creating new user...');
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        phone: formattedPhone,
-        phone_confirm: true,
-        user_metadata: { country, created_via: 'phone_otp' },
-      });
+      console.log('Creating new user for phone:', formattedPhone);
+      
+      try {
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+          phone: formattedPhone,
+          phone_confirm: true,
+          user_metadata: { country, created_via: 'phone_otp' },
+        });
 
-      if (newUser?.user) {
-        userId = newUser.user.id;
-        isNewUser = true;
-        console.log('Created new user:', userId);
-        
-        // Save phone mapping
-        await supabase.from('phone_users')
-          .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
-      } else if (createError?.message?.includes('already')) {
-        // User exists - find them
-        console.log('User exists, searching...');
-        const { data: userList } = await supabase.auth.admin.listUsers({ page: 1, perPage: 100 });
-        
-        const existingUser = userList?.users?.find(u => 
-          u.phone === formattedPhone || 
-          u.phone === formattedPhone.replace('+', '')
-        );
-        
-        if (!existingUser) {
-          console.error('Could not find existing user');
-          return errorResponse('Account error - please contact support', 500, undefined, req);
+        console.log('Create user result:', { 
+          userId: newUser?.user?.id, 
+          errorMessage: createError?.message,
+          errorStatus: createError?.status,
+          errorName: createError?.name
+        });
+
+        if (newUser?.user) {
+          userId = newUser.user.id;
+          isNewUser = true;
+          console.log('Created new user:', userId);
+          
+          // Save phone mapping
+          const { error: mappingError } = await supabase.from('phone_users')
+            .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
+          if (mappingError) console.error('Mapping error:', mappingError);
+        } else if (createError?.message?.includes('already') || createError?.message?.includes('exists')) {
+          // User exists - find them
+          console.log('User already exists, searching...');
+          const { data: userList, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+          
+          if (listError) {
+            console.error('List users error:', listError);
+          }
+          
+          console.log('Total users found:', userList?.users?.length);
+          
+          const existingUser = userList?.users?.find(u => 
+            u.phone === formattedPhone || 
+            u.phone === formattedPhone.replace('+', '')
+          );
+          
+          if (!existingUser) {
+            console.error('Could not find existing user with phone:', formattedPhone);
+            // Try to create anyway with email fallback
+            const phoneDigits = formattedPhone.replace(/\D/g, '');
+            const fallbackEmail = `${phoneDigits}@phone.warehousepos.app`;
+            
+            console.log('Trying fallback creation with email:', fallbackEmail);
+            const { data: fallbackUser, error: fallbackError } = await supabase.auth.admin.createUser({
+              email: fallbackEmail,
+              email_confirm: true,
+              phone: formattedPhone,
+              phone_confirm: true,
+              user_metadata: { country, created_via: 'phone_otp', phone: formattedPhone },
+            });
+            
+            if (fallbackUser?.user) {
+              userId = fallbackUser.user.id;
+              isNewUser = true;
+              console.log('Created user with fallback:', userId);
+              
+              await supabase.from('phone_users')
+                .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
+            } else {
+              console.error('Fallback creation failed:', fallbackError);
+              return errorResponse('Account error - please try again', 500, undefined, req);
+            }
+          } else {
+            userId = existingUser.id;
+            console.log('Found existing user:', userId);
+            
+            // Save phone mapping for next time
+            await supabase.from('phone_users')
+              .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
+          }
+        } else {
+          // Other error - try with email as primary
+          console.error('Create user failed:', createError);
+          
+          const phoneDigits = formattedPhone.replace(/\D/g, '');
+          const fallbackEmail = `${phoneDigits}@phone.warehousepos.app`;
+          
+          console.log('Primary creation failed, trying with email:', fallbackEmail);
+          const { data: fallbackUser, error: fallbackError } = await supabase.auth.admin.createUser({
+            email: fallbackEmail,
+            email_confirm: true,
+            user_metadata: { country, created_via: 'phone_otp', phone: formattedPhone },
+          });
+          
+          if (fallbackUser?.user) {
+            userId = fallbackUser.user.id;
+            isNewUser = true;
+            console.log('Created user with email fallback:', userId);
+            
+            await supabase.from('phone_users')
+              .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
+          } else {
+            console.error('All creation attempts failed:', fallbackError);
+            return errorResponse('Failed to create account: ' + (fallbackError?.message || createError?.message || 'Unknown error'), 500, undefined, req);
+          }
         }
-        
-        userId = existingUser.id;
-        console.log('Found existing user:', userId);
-        
-        // Save phone mapping for next time
-        await supabase.from('phone_users')
-          .upsert({ phone: formattedPhone, user_id: userId }, { onConflict: 'phone' });
-      } else {
-        console.error('Failed to create user:', createError);
-        return errorResponse('Failed to create account', 500, undefined, req);
+      } catch (createException) {
+        console.error('Exception during user creation:', createException);
+        return errorResponse('Failed to create account: ' + (createException instanceof Error ? createException.message : String(createException)), 500, undefined, req);
       }
     }
 

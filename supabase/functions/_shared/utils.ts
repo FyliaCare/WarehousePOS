@@ -4,22 +4,28 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 export function getEnv(key: string, required = true): string {
   const value = Deno.env.get(key) || '';
   if (required && !value) {
+    console.error(`Missing env var: ${key}`);
     throw new Error(`Missing required environment variable: ${key}`);
   }
   return value;
 }
 
 export function isDevelopment(): boolean {
-  return getEnv('ENVIRONMENT', false) !== 'production';
+  const env = getEnv('ENVIRONMENT', false);
+  console.log('ENVIRONMENT value:', env);
+  return env !== 'production';
 }
 
 // Supabase client factory
 export function createSupabaseClient(): SupabaseClient {
-  return createClient(
-    getEnv('SUPABASE_URL'),
-    getEnv('SUPABASE_SERVICE_ROLE_KEY'),
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const url = getEnv('SUPABASE_URL');
+  const key = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+  console.log('Creating Supabase client with URL:', url);
+  console.log('Service role key exists:', !!key, 'length:', key?.length);
+  
+  return createClient(url, key, { 
+    auth: { autoRefreshToken: false, persistSession: false } 
+  });
 }
 
 // Phone formatting
