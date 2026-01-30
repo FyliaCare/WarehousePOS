@@ -145,13 +145,13 @@ export function DashboardPage() {
 
       const uniqueCustomers = new Set((activeCustomers || []).map((o: any) => o.customer_id)).size;
 
-      // Low stock products
+      // Low stock products - query stock_levels table joined with products
       const { data: lowStockProducts } = await supabase
-        .from('products')
-        .select('id')
+        .from('stock_levels')
+        .select('id, quantity, product:products!inner(id, is_active)')
         .eq('store_id', store.id)
-        .eq('is_active', true)
-        .lt('stock_quantity', 10);
+        .eq('product.is_active', true)
+        .lt('quantity', 10);
 
       // Pending orders
       const { data: pendingOrders } = await supabase
@@ -160,32 +160,38 @@ export function DashboardPage() {
         .eq('store_id', store.id)
         .in('status', ['pending', 'processing']);
 
-      // Top products
-      const { data: topProductData } = await supabase
-        .from('order_items')
-        .select(`
-          quantity,
-          total_price,
-          product:products(name),
-          order:orders!inner(store_id, status, created_at)
-        `)
-        .eq('order.store_id', store.id)
-        .gte('order.created_at', monthAgoISO)
-        .in('order.status', ['completed', 'delivered']);
+      // Top products - fetch through orders first then order_items
+      const { data: recentOrders } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('store_id', store.id)
+        .gte('created_at', monthAgoISO)
+        .in('status', ['completed', 'delivered']);
 
-      const productSales = (topProductData || []).reduce((acc: Record<string, { name: string; sold: number; revenue: number }>, item: any) => {
-        const name = item.product?.name || 'Unknown';
-        if (!acc[name]) {
-          acc[name] = { name, sold: 0, revenue: 0 };
-        }
-        acc[name].sold += item.quantity;
-        acc[name].revenue += item.total_price;
-        return acc;
-      }, {});
+      let topProducts: { name: string; sold: number; revenue: number }[] = [];
+      
+      if (recentOrders && recentOrders.length > 0) {
+        const orderIds = recentOrders.map(o => o.id);
+        
+        const { data: topProductData } = await supabase
+          .from('order_items')
+          .select('quantity, total, product_name')
+          .in('order_id', orderIds);
 
-      const topProducts = Object.values(productSales)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 3);
+        const productSales = (topProductData || []).reduce((acc: Record<string, { name: string; sold: number; revenue: number }>, item: any) => {
+          const name = item.product_name || 'Unknown';
+          if (!acc[name]) {
+            acc[name] = { name, sold: 0, revenue: 0 };
+          }
+          acc[name].sold += item.quantity;
+          acc[name].revenue += item.total;
+          return acc;
+        }, {});
+
+        topProducts = Object.values(productSales)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 3);
+      }
 
       // Monthly target (can be stored in tenant settings, using default for now)
       // Use type assertion since tenant.settings is a JSONB field

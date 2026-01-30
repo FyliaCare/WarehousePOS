@@ -26,8 +26,8 @@ export function initSentry() {
     replaysSessionSampleRate: env.IS_PRODUCTION ? 0.1 : 0,
     replaysOnErrorSampleRate: 1.0,
     
-    // Only send errors in production
-    enabled: env.IS_PRODUCTION,
+    // Enable in both dev and production for testing (change back to env.IS_PRODUCTION after testing)
+    enabled: true,
     
     // Filter out common non-actionable errors
     ignoreErrors: [
@@ -132,6 +132,21 @@ export function clearUser() {
 // Add breadcrumb for debugging
 export function addBreadcrumb(message: string, category: string, data?: Record<string, any>) {
   Sentry.addBreadcrumb({ message, category, data, level: 'info' });
+}
+
+// Test function - call from browser console: testSentry()
+export function testSentry() {
+  try {
+    throw new Error('Test error from WarehousePOS - Sentry is working! 🎉');
+  } catch (error) {
+    Sentry.captureException(error);
+    console.log('✅ Test error sent to Sentry! Check your dashboard.');
+  }
+}
+
+// Expose to window for console testing
+if (typeof window !== 'undefined') {
+  (window as any).testSentry = testSentry;
 }
 
 export { Sentry };

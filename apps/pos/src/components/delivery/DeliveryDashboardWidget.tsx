@@ -78,35 +78,37 @@ export function DeliveryDashboardWidget() {
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store.id)
-        .eq('fulfillment_type', 'delivery')
-        .is('rider_id', null)
-        .not('status', 'in', '("cancelled","delivered")');
+        .eq('order_type', 'delivery')
+        .in('status', ['pending', 'processing']);
 
-      // Fetch in-progress deliveries
+      // Fetch in-progress deliveries through orders
       const { count: inProgressCount } = await supabase
-        .from('delivery_assignments')
+        .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store.id)
-        .in('status', ['assigned', 'accepted', 'picked_up', 'in_transit']);
+        .eq('order_type', 'delivery')
+        .in('status', ['ready', 'out_for_delivery']);
 
       // Fetch today's completed deliveries
       const { data: completedData } = await supabase
-        .from('delivery_assignments')
+        .from('orders')
         .select('delivery_fee')
         .eq('store_id', store.id)
+        .eq('order_type', 'delivery')
         .eq('status', 'delivered')
-        .gte('delivered_at', todayISO);
+        .gte('updated_at', todayISO);
 
       const completedToday = completedData?.length || 0;
       const totalRevenueToday = completedData?.reduce((sum, d) => sum + (d.delivery_fee || 0), 0) || 0;
 
-      // Fetch today's failed deliveries
+      // Fetch today's failed/cancelled deliveries
       const { count: failedToday } = await supabase
-        .from('delivery_assignments')
+        .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('store_id', store.id)
-        .eq('status', 'failed')
-        .gte('created_at', todayISO);
+        .eq('order_type', 'delivery')
+        .eq('status', 'cancelled')
+        .gte('updated_at', todayISO);
 
       // Fetch rider stats
       const { data: riders } = await supabase
