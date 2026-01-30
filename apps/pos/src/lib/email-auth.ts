@@ -50,10 +50,11 @@ export async function signUpWithEmail(
       return { success: false, error: 'Password must be at least 6 characters' };
     }
 
-    console.log('Signing up with email:', email);
+    const cleanEmail = email.toLowerCase().trim();
+    console.log('Signing up with email:', cleanEmail);
 
     const { data, error } = await supabase.auth.signUp({
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       password,
       options: {
         data: {
@@ -76,13 +77,37 @@ export async function signUpWithEmail(
 
     console.log('Sign up successful:', data.user.id);
 
-    // Check if email confirmation is required
-    const needsEmailVerification = !data.session;
+    // If no session (email confirmation required), sign in immediately
+    // This works because Supabase allows sign in even if email not confirmed (default setting)
+    if (!data.session) {
+      console.log('No session after signup, signing in...');
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      
+      if (signInError) {
+        console.error('Auto sign-in error:', signInError);
+        // User created but can't sign in - they may need to confirm email
+        return {
+          success: true,
+          user: data.user,
+          needsEmailVerification: true,
+        };
+      }
+      
+      console.log('Auto sign-in successful');
+      return {
+        success: true,
+        user: signInData.user || data.user,
+        needsEmailVerification: false,
+      };
+    }
 
     return {
       success: true,
       user: data.user,
-      needsEmailVerification,
+      needsEmailVerification: false,
     };
   } catch (error: any) {
     console.error('Sign up exception:', error);
