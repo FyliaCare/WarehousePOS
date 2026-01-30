@@ -194,16 +194,12 @@ export async function setupBusinessProfile(params: {
     // Create new tenant, store, and user profile
     const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '') + '-' + Date.now().toString(36);
 
-    // Create tenant
+    // Create tenant (minimal required fields only)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .insert({
         name: businessName,
         slug,
-        country,
-        currency: country === 'GH' ? 'GHS' : 'NGN',
-        subscription_status: 'trial',
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       } as any)
       .select()
       .single();
