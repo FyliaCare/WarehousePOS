@@ -29,6 +29,7 @@ import { formatCurrency, cn } from '@warehousepos/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useCartStore, CartItem } from '@/stores/cartStore';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import type { Product, Customer, PaymentMethod, CountryCode, Sale } from '@warehousepos/types';
@@ -396,7 +397,7 @@ export function POSLayout() {
       queryClient.invalidateQueries({ queryKey: ['recent-sales'] });
       
     } catch (error: any) {
-      console.error('Checkout error:', error);
+      logger.error('Checkout error:', error);
       toast.error('Failed to complete sale');
     } finally {
       setIsProcessing(false);

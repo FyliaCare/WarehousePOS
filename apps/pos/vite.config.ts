@@ -145,7 +145,7 @@ export default defineConfig({
         clientsClaim: true,
       },
       devOptions: {
-        enabled: true, // Enable PWA in dev mode for testing
+        enabled: false, // Disable PWA in dev mode - enable for testing only
         type: 'module'
       }
     })
@@ -160,6 +160,26 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Only generate sourcemaps in development for security
+    sourcemap: process.env.NODE_ENV !== 'production',
+    // Optimize chunks
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['framer-motion', 'lucide-react', 'recharts'],
+          state: ['zustand', '@tanstack/react-query'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+    // Minification settings
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+      },
+    },
   },
 });

@@ -1,8 +1,22 @@
 // Disable RLS using Supabase REST API
 // This creates a temporary function to execute the DDL, then cleans up
+//
+// USAGE: Set environment variables before running:
+//   SUPABASE_URL=your-url SUPABASE_SERVICE_ROLE_KEY=your-key SUPABASE_ANON_KEY=your-anon-key node scripts/disable-rls.mjs
+//
+import dotenv from 'dotenv';
+dotenv.config();
 
-const SUPABASE_URL = 'https://azbheakmjwtslgmeuioj.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6YmhlYWttand0c2xnbWV1aW9qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTUxNzM2MiwiZXhwIjoyMDg1MDkzMzYyfQ.n3x2EcJ5fVrmTZB3BXApxrfThcpXz_OpmoSKkc82bpM';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌ Missing required environment variables:');
+  console.error('   SUPABASE_URL (or VITE_SUPABASE_URL)');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
 
 const headers = {
   'Content-Type': 'application/json',
@@ -61,7 +75,10 @@ async function checkRLSStatus() {
   // We can check by querying with anon key and service role key
   // If results differ, RLS is enabled
   
-  const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6YmhlYWttand0c2xnbWV1aW9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MTczNjIsImV4cCI6MjA4NTA5MzM2Mn0.vzhW-2WWQaS3NlcCo3dFhqf_HD-drM5syQQEq5lnV-o';
+  if (!ANON_KEY) {
+    console.log('   ⚠️ SUPABASE_ANON_KEY not set, skipping anon comparison');
+    return;
+  }
   
   // Query with service role (bypasses RLS)
   const serviceResponse = await fetch(`${SUPABASE_URL}/rest/v1/tenants?select=id&limit=5`, { headers });
@@ -70,8 +87,8 @@ async function checkRLSStatus() {
   // Query with anon key (subject to RLS)
   const anonResponse = await fetch(`${SUPABASE_URL}/rest/v1/tenants?select=id&limit=5`, {
     headers: {
-      'apikey': anonKey,
-      'Authorization': `Bearer ${anonKey}`
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${ANON_KEY}`
     }
   });
   

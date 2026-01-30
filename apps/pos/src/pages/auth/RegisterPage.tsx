@@ -4,6 +4,7 @@ import { Loader2, ArrowLeft, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, 
 import { sendOTP, verifyOTP, createUserProfile, formatPhone } from '@/lib/supabase-auth';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import type { CountryCode } from '@warehousepos/types';
 
 type Step = 'country' | 'phone' | 'otp' | 'details' | 'success';
@@ -27,9 +28,6 @@ export function RegisterPage() {
   
   // Temp auth user ID (before profile is created)
   const [tempAuthUserId, setTempAuthUserId] = useState<string | null>(null);
-  
-  // Dev OTP for testing
-  const [devOTP, setDevOTP] = useState<string | null>(null);
   
   const steps: Step[] = ['country', 'phone', 'otp', 'details'];
   const currentStepIndex = steps.indexOf(step);
@@ -76,14 +74,12 @@ export function RegisterPage() {
       if (result.success) {
         toast.success('OTP sent to your phone! 📱');
         setResendCountdown(60);
-        if (result.devOTP) {
-          setDevOTP(result.devOTP);
-        }
         setStep('otp');
       } else {
         toast.error(result.error || 'Failed to send OTP');
       }
     } catch (error: any) {
+      logger.error('Failed to send OTP:', error);
       toast.error(error.message || 'Failed to send OTP');
     } finally {
       setIsLoading(false);
@@ -98,9 +94,9 @@ export function RegisterPage() {
     
     setIsLoading(true);
     try {
-      console.log('Verifying OTP for registration...');
+      logger.debug('Verifying OTP for registration...');
       const result = await verifyOTP(phone, country, otp, 'registration');
-      console.log('Verify OTP result:', result);
+      logger.debug('Verify OTP result:', result);
       
       if (result.success) {
         toast.success('Phone verified! ✅');
@@ -116,7 +112,7 @@ export function RegisterPage() {
         setIsLoading(false);
       }
     } catch (error: any) {
-      console.error('Verify OTP exception:', error);
+      logger.error('Verify OTP exception:', error);
       toast.error(error.message || 'Failed to verify OTP');
       setIsLoading(false);
     }
@@ -131,14 +127,12 @@ export function RegisterPage() {
       
       if (result.success) {
         setResendCountdown(60);
-        if (result.devOTP) {
-          setDevOTP(result.devOTP);
-        }
         toast.success('New OTP sent! 📱');
       } else {
         toast.error(result.error || 'Failed to resend OTP');
       }
     } catch (error: any) {
+      logger.error('Failed to resend OTP:', error);
       toast.error(error.message || 'Failed to resend OTP');
     } finally {
       setIsLoading(false);
@@ -160,7 +154,7 @@ export function RegisterPage() {
       return;
     }
     
-    console.log('Creating user profile...', { tempAuthUserId, businessName, fullName, phone, country });
+    logger.debug('Creating user profile...', { tempAuthUserId, businessName, fullName, phone, country });
     setIsLoading(true);
     try {
       const result = await createUserProfile({
@@ -172,7 +166,7 @@ export function RegisterPage() {
         email: email.trim() || undefined,
       });
       
-      console.log('Create profile result:', result);
+      logger.debug('Create profile result:', result);
       
       if (result.success) {
         setStep('success');
@@ -424,14 +418,6 @@ export function RegisterPage() {
                     <label htmlFor="otp" className="block text-sm font-semibold text-gray-900 mb-1.5">
                       Verification code
                     </label>
-                    
-                    {/* Development OTP Display */}
-                    {devOTP && (
-                      <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-xs text-amber-600 font-medium">Development Mode</p>
-                        <p className="text-lg font-mono font-bold text-amber-800 tracking-widest">{devOTP}</p>
-                      </div>
-                    )}
                     
                     <input
                       id="otp"

@@ -1,6 +1,20 @@
 // Setup script using Supabase REST API with service_role key
-const SUPABASE_URL = 'https://azbheakmjwtslgmeuioj.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6YmhlYWttand0c2xnbWV1aW9qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTUxNzM2MiwiZXhwIjoyMDg1MDkzMzYyfQ.n3x2EcJ5fVrmTZB3BXApxrfThcpXz_OpmoSKkc82bpM';
+//
+// USAGE: Set environment variables before running:
+//   SUPABASE_URL=your-url SUPABASE_SERVICE_ROLE_KEY=your-key node scripts/setup-via-rest.mjs
+//
+import dotenv from 'dotenv';
+dotenv.config();
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌ Missing required environment variables:');
+  console.error('   SUPABASE_URL (or VITE_SUPABASE_URL)');
+  console.error('   SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
 
 async function runSQL(sql) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/exec_sql`, {

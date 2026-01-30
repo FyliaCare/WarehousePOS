@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { env, isValidEnv, envErrors } from './env';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Validate environment before creating client
+if (!isValidEnv) {
+  throw new Error(`Supabase configuration error: ${envErrors.join(', ')}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<any>(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

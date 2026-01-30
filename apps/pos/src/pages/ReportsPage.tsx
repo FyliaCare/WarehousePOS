@@ -115,13 +115,30 @@ export default function ReportsPage() {
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(-30);
 
+      // Calculate previous period for accurate growth comparison
+      // Get data from previous period of same length
+      const previousPeriodStart = new Date(getDateRange());
+      const now = new Date();
+      const periodLength = now.getTime() - previousPeriodStart.getTime();
+      const prevStartDate = new Date(previousPeriodStart.getTime() - periodLength);
+      
+      const { data: prevData } = await supabase
+        .from('orders')
+        .select('total')
+        .eq('store_id', store!.id)
+        .gte('created_at', prevStartDate.toISOString())
+        .lt('created_at', getDateRange())
+        .in('status', ['completed', 'delivered']);
+      
+      const prevTotal = (prevData || []).reduce((sum, order: any) => sum + order.total, 0);
+
       return {
         totalSales,
         orderCount,
         avgOrderValue,
         byPaymentMethod,
         dailySales,
-        prevTotal: totalSales * 0.85, // Mock previous period for growth calc
+        prevTotal,
       };
     },
     enabled: !!store?.id,

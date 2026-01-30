@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowLeft, Sparkles, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Phone, RefreshCw, Code } from 'lucide-react';
+import { Loader2, ArrowLeft, Sparkles, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Phone, RefreshCw } from 'lucide-react';
 import { sendOTP, verifyOTP } from '@/lib/supabase-auth';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import type { CountryCode } from '@warehousepos/types';
 
 type Mode = 'phone' | 'verify-otp';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { user, isInitialized, refreshUser, devLogin } = useAuthStore();
+  const { user, isInitialized, refreshUser } = useAuthStore();
   
   const [mode, setMode] = useState<Mode>('phone');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +21,6 @@ export function LoginPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [formattedPhone, setFormattedPhone] = useState('');
-  const [devOTP, setDevOTP] = useState<string | null>(null);
 
   const isGhana = country === 'GH';
 
@@ -58,16 +58,12 @@ export function LoginPage() {
       if (result.success) {
         setMode('verify-otp');
         setResendCountdown(60);
-        // Store dev OTP if provided (dev mode only)
-        if (result.devOTP) {
-          setDevOTP(result.devOTP);
-        }
         toast.success('OTP sent to your phone! 📱');
       } else {
         toast.error(result.error || 'Failed to send OTP');
       }
     } catch (error) {
-      console.error('Send OTP error:', error);
+      logger.error('Send OTP error:', error);
       toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -97,7 +93,7 @@ export function LoginPage() {
         try {
           await refreshUser();
         } catch (e) {
-          console.warn('Failed to refresh user, navigating anyway:', e);
+          logger.warn('Failed to refresh user, navigating anyway', { error: String(e) });
         }
         toast.success('Login successful! 🎉');
         navigate('/dashboard');
@@ -106,7 +102,7 @@ export function LoginPage() {
         setIsLoading(false);
       }
     } catch (error) {
-      console.error('Verify OTP error:', error);
+      logger.error('Verify OTP error:', error);
       toast.error('An error occurred. Please try again.');
       setIsLoading(false);
     }
@@ -122,15 +118,12 @@ export function LoginPage() {
       
       if (result.success) {
         setResendCountdown(60);
-        if (result.devOTP) {
-          setDevOTP(result.devOTP);
-        }
         toast.success('New OTP sent! 📱');
       } else {
         toast.error(result.error || 'Failed to resend OTP');
       }
     } catch (error) {
-      console.error('Resend OTP error:', error);
+      logger.error('Resend OTP error:', error);
       toast.error('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -296,14 +289,6 @@ export function LoginPage() {
                     className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 text-xl text-center tracking-[0.75em] placeholder-gray-300"
                   />
                   
-                  {/* Dev OTP Display (only in development) */}
-                  {devOTP && (
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
-                      <Zap className="w-3.5 h-3.5 text-amber-600" />
-                      <span className="text-xs text-amber-700">Dev OTP: <strong className="font-mono">{devOTP}</strong></span>
-                    </div>
-                  )}
-                  
                   {/* Resend OTP */}
                   <div className="mt-3 text-center">
                     {resendCountdown > 0 ? (
@@ -376,22 +361,6 @@ export function LoginPage() {
                     </div>
                   ))}
                 </div>
-                
-                {/* DEV BYPASS - Remove in production */}
-                {import.meta.env.DEV && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      devLogin();
-                      toast.success('🔧 Dev mode activated!');
-                      navigate('/dashboard');
-                    }}
-                    className="mt-4 w-full flex items-center justify-center gap-2 py-2 px-4 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition-colors border border-amber-300"
-                  >
-                    <Code className="w-4 h-4" />
-                    Dev Login (Skip Auth)
-                  </button>
-                )}
               </div>
             )}
           </div>

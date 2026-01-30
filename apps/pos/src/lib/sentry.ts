@@ -1,29 +1,33 @@
 import * as Sentry from '@sentry/react';
+import { env } from './env';
 
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+const SENTRY_DSN = env.SENTRY_DSN;
 const APP_NAME = 'pos';
-const ENVIRONMENT = import.meta.env.MODE;
+const APP_VERSION = '1.0.0'; // Should match package.json version
 
 export function initSentry() {
   if (!SENTRY_DSN) {
-    console.log('📊 Sentry DSN not configured - error monitoring disabled');
+    // Silent in production, no console.log
+    if (env.IS_DEVELOPMENT) {
+      console.log('📊 Sentry DSN not configured - error monitoring disabled');
+    }
     return;
   }
 
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: ENVIRONMENT,
-    release: `warehousepos-${APP_NAME}@1.0.0`,
+    environment: env.IS_PRODUCTION ? 'production' : 'development',
+    release: `warehousepos-${APP_NAME}@${APP_VERSION}`,
     
-    // Performance Monitoring
-    tracesSampleRate: ENVIRONMENT === 'production' ? 0.1 : 1.0,
+    // Performance Monitoring - lower sampling in production
+    tracesSampleRate: env.IS_PRODUCTION ? 0.1 : 1.0,
     
     // Session Replay
-    replaysSessionSampleRate: 0.1,
+    replaysSessionSampleRate: env.IS_PRODUCTION ? 0.1 : 0,
     replaysOnErrorSampleRate: 1.0,
     
     // Only send errors in production
-    enabled: ENVIRONMENT === 'production',
+    enabled: env.IS_PRODUCTION,
     
     // Filter out common non-actionable errors
     ignoreErrors: [
@@ -35,6 +39,15 @@ export function initSentry() {
       'AbortError',
       'Request aborted',
       'ResizeObserver loop',
+      'Non-Error promise rejection',
+      'Load failed',
+      'cancelled',
+    ],
+    
+    // Don't send from localhost
+    denyUrls: [
+      /localhost/,
+      /127\.0\.0\.1/,
     ],
     
     initialScope: {
@@ -45,7 +58,11 @@ export function initSentry() {
     
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
+      Sentry.replayIntegration({
+        // Mask all text and block all media in replay
+        maskAllText: true,
+        blockAllMedia: true,
+      }),
     ],
     
     beforeSend(event) {
@@ -66,13 +83,20 @@ export function initSentry() {
               store_id: auth.state.user.store_id,
             };
           }
-        } catch (e) {}
+        } catch {
+          // Ignore parse errors
+        }
       }
+      
+      // Remove sensitive data
+      if (event.request?.headers) {
+        delete event.request.headers['Authorization'];
+        delete event.request.headers['apikey'];
+      }
+      
       return event;
     },
   });
-
-  console.log(`✅ Sentry initialized for ${APP_NAME} (${ENVIRONMENT})`);
 }
 
 // Error boundary component
