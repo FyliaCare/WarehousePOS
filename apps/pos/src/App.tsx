@@ -6,9 +6,8 @@ import { PWAInstallPrompt, OfflineIndicator } from '@/components/PWAInstallPromp
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { AppLayout } from '@/layouts/AppLayout';
 
-// Pages
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { RegisterPage } from '@/pages/auth/RegisterPage';
+// Pages - Auth (using email-based auth)
+import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CountrySelectPage } from '@/pages/auth/CountrySelectPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { POSLayout } from '@/pages/pos/POSLayout';
@@ -79,6 +78,12 @@ function App() {
               <RegisterPage />
             </AuthRoute>
           }
+        />
+        
+        {/* Setup route - for users who signed in but need business setup */}
+        <Route
+          path="/setup"
+          element={<RegisterPage />}
         />
         
         {/* Other Auth routes with layout */}
