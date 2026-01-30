@@ -88,7 +88,7 @@ export async function sendOTP(
   try {
     // Use Supabase's built-in signInWithOtp
     // This triggers our SMS Hook which sends via mNotify/Termii
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       phone: formattedPhone,
       options: {
         // If user doesn't exist, create them
