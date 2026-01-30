@@ -4,8 +4,8 @@
 
 /* ============================================
    WAREHOUSEPOS DESIGN SYSTEM
-   🇬🇭 Ghana Theme: Gold, Black & White
-   🇳🇬 Nigeria Theme: Green, White & Black
+   UNIFIED THEME: Green, Gold, Black & White
+   For Ghana 🇬🇭 and Nigeria 🇳🇬
    ============================================ */
 
 /* PWA Safe Area Support */
@@ -18,120 +18,86 @@
 
 @layer base {
   /* ===========================================
-     DEFAULT THEME (Ghana - Gold, Black & White)
-     Vibrant Gold: #FFD000 / HSL 48 100% 50%
+     LIGHT MODE - Green, Gold, Black & White
+     Primary Green: #059669 (emerald-600)
+     Accent Gold: #D4AF37
      =========================================== */
   :root {
     /* Base Colors */
     --background: 0 0% 100%;
-    --foreground: 0 0% 8%;
+    --foreground: 222 47% 11%;
     
     /* Cards & Surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 222 47% 11%;
     
-    /* Primary - Ghana Vibrant Gold */
-    --primary: 48 100% 50%;
-    --primary-foreground: 0 0% 8%;
+    /* Primary - Brand Green */
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
     
-    /* Secondary */
-    --secondary: 48 100% 97%;
-    --secondary-foreground: 0 0% 8%;
+    /* Secondary - Light Green Tint */
+    --secondary: 152 76% 97%;
+    --secondary-foreground: 160 84% 39%;
     
     /* Muted */
-    --muted: 48 30% 96%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
     
     /* Accent - Gold */
-    --accent: 48 100% 50%;
-    --accent-foreground: 0 0% 8%;
+    --accent: 43 74% 49%;
+    --accent-foreground: 222 47% 11%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
     /* Borders & Inputs */
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 48 100% 50%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 160 84% 39%;
     
     /* Radius */
     --radius: 0.5rem;
     
-    /* Country Brand Colors */
-    --brand-primary: 48 100% 50%;
-    --brand-dark: 0 0% 8%;
-    --brand-light: 0 0% 100%;
-    --brand-primary-hex: #FFD000;
-    --brand-hover: 48 100% 45%;
+    /* Brand Colors */
+    --brand-green: #059669;
+    --brand-gold: #D4AF37;
+    --brand-black: #0f172a;
+    --brand-white: #ffffff;
   }
 
   /* ===========================================
-     DARK MODE (Ghana - Gold & Black Luxury)
+     DARK MODE - Green & Gold on Dark
      =========================================== */
   .dark {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 98%;
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
     
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 48 100% 50%;
-    --primary-foreground: 0 0% 8%;
+    --primary: 160 84% 45%;
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 33% 15%;
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 55%;
     
-    --accent: 48 100% 45%;
-    --accent-foreground: 0 0% 8%;
+    --accent: 43 74% 49%;
+    --accent-foreground: 222 47% 11%;
     
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 48 100% 50%;
-  }
-
-  /* ===========================================
-     NIGERIA THEME (Green, White & Black)
-     Nigeria Green: #008751 / HSL 153 100% 27%
-     =========================================== */
-  .theme-nigeria {
-    --primary: 153 100% 27%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 153 100% 27%;
-    --accent-foreground: 0 0% 100%;
-    --ring: 153 100% 27%;
-    
-    --secondary: 153 40% 97%;
-    --muted: 153 20% 96%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    
-    /* Country Brand Colors */
-    --brand-primary: 153 100% 27%;
-    --brand-dark: 0 0% 8%;
-    --brand-light: 0 0% 100%;
-    --brand-primary-hex: #008751;
-    --brand-hover: 153 100% 22%;
-  }
-
-  .theme-nigeria.dark {
-    --primary: 153 100% 35%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 153 100% 30%;
-    --secondary: 0 0% 12%;
-    --muted: 0 0% 12%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 160 84% 45%;
   }
 }
 
@@ -389,6 +355,23 @@
   .empty-state-icon {
     @apply w-16 h-16 mb-4 text-muted-foreground/50;
   }
+  
+  /* Brand gradient backgrounds - Unified */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, 
+      rgba(5, 150, 105, 0.1) 0%, 
+      rgba(5, 150, 105, 0.05) 50%, 
+      transparent 100%
+    );
+  }
+  
+  .bg-gradient-gold-accent {
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.1) 0%, 
+      rgba(212, 175, 55, 0.05) 50%, 
+      transparent 100%
+    );
+  }
 }
 
 /* ============================================
@@ -396,35 +379,36 @@
    ============================================ */
 
 @layer utilities {
-  /* Text Gradient */
-  .text-gradient-gold {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-ghana-gold-400 via-ghana-gold-500 to-ghana-gold-600;
+  /* Text Gradient - Brand Green */
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600;
   }
   
-  .text-gradient-green {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green-400 via-nigeria-green-500 to-nigeria-green-600;
+  /* Text Gradient - Gold Accent */
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600;
   }
   
   /* Glow Effects */
+  .glow-brand {
+    box-shadow: 0 0 20px rgba(5, 150, 105, 0.3), 0 0 40px rgba(5, 150, 105, 0.1);
+  }
+  
   .glow-gold {
     box-shadow: 0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.1);
   }
   
-  .glow-green {
-    box-shadow: 0 0 20px rgba(0, 135, 81, 0.3), 0 0 40px rgba(0, 135, 81, 0.1);
+  /* Border Gradient */
+  .border-gradient-brand {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #059669, #10b981, #059669) border-box;
   }
   
-  /* Border Gradient */
   .border-gradient-gold {
     border: 2px solid transparent;
     background: linear-gradient(var(--background), var(--background)) padding-box,
-                linear-gradient(135deg, #D4AF37, #F5E19A, #D4AF37) border-box;
-  }
-  
-  .border-gradient-green {
-    border: 2px solid transparent;
-    background: linear-gradient(var(--background), var(--background)) padding-box,
-                linear-gradient(135deg, #008751, #00B36B, #008751) border-box;
+                linear-gradient(135deg, #D4AF37, #fde047, #D4AF37) border-box;
   }
   
   /* Scrollbar Styles */

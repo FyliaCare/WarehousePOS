@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 // Shared Tailwind configuration for all WarehousePOS apps
+// UNIFIED THEME: Green, Gold, Black & White
 const config: Partial<Config> = {
   darkMode: ['class'],
   theme: {
@@ -46,76 +47,79 @@ const config: Partial<Config> = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // 🇬🇭 Ghana Theme - Gold & Black (Luxurious, Premium)
-        'ghana-gold': {
+        
+        // ============================================
+        // UNIFIED BRAND COLORS - Green, Gold, Black, White
+        // Used across Ghana 🇬🇭 and Nigeria 🇳🇬
+        // ============================================
+        
+        // Primary Green - Main brand color
+        'brand-green': {
+          DEFAULT: '#059669', // emerald-600
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+          950: '#022c22',
+        },
+        
+        // Accent Gold - Premium highlights
+        'brand-gold': {
           DEFAULT: '#D4AF37',
-          50: '#FDF8E8',
-          100: '#FAF0CC',
-          200: '#F5E19A',
-          300: '#EFD168',
-          400: '#E9C236',
-          500: '#D4AF37',
-          600: '#B8962D',
-          700: '#8A7022',
-          800: '#5C4B17',
-          900: '#2E250B',
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',
+          500: '#eab308',
+          600: '#D4AF37', // Our gold
+          700: '#a16207',
+          800: '#854d0e',
+          900: '#713f12',
+          950: '#422006',
         },
-        'ghana-black': {
-          DEFAULT: '#1A1A1A',
-          50: '#F5F5F5',
-          100: '#E0E0E0',
-          200: '#B3B3B3',
-          300: '#808080',
-          400: '#4D4D4D',
-          500: '#333333',
-          600: '#262626',
-          700: '#1A1A1A',
-          800: '#0D0D0D',
-          900: '#000000',
+        
+        // Neutral Black
+        'brand-black': {
+          DEFAULT: '#0f172a', // slate-900
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
         },
-        // 🇳🇬 Nigeria Theme - Green & Black (Bold, Strong)
-        'nigeria-green': {
-          DEFAULT: '#008751',
-          50: '#E6F5EE',
-          100: '#CCF0E0',
-          200: '#99E0C1',
-          300: '#66D1A2',
-          400: '#33C183',
-          500: '#008751',
-          600: '#006B41',
-          700: '#005031',
-          800: '#003620',
-          900: '#001B10',
-        },
-        'nigeria-black': {
-          DEFAULT: '#1A1A1A',
-          50: '#F5F5F5',
-          100: '#E0E0E0',
-          200: '#B3B3B3',
-          300: '#808080',
-          400: '#4D4D4D',
-          500: '#333333',
-          600: '#262626',
-          700: '#1A1A1A',
-          800: '#0D0D0D',
-          900: '#000000',
-        },
+        
         // Success, Warning, Error colors
         success: {
           DEFAULT: '#10B981',
           50: '#ECFDF5',
+          100: '#D1FAE5',
           500: '#10B981',
           600: '#059669',
         },
         warning: {
           DEFAULT: '#F59E0B',
           50: '#FFFBEB',
+          100: '#FEF3C7',
           500: '#F59E0B',
           600: '#D97706',
         },
         error: {
           DEFAULT: '#EF4444',
           50: '#FEF2F2',
+          100: '#FEE2E2',
           500: '#EF4444',
           600: '#DC2626',
         },
@@ -136,8 +140,8 @@ const config: Partial<Config> = {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
       },
       boxShadow: {
+        'glow-green': '0 0 20px rgba(5, 150, 105, 0.3)',
         'glow-gold': '0 0 20px rgba(212, 175, 55, 0.3)',
-        'glow-green': '0 0 20px rgba(0, 135, 81, 0.3)',
         'glow-sm': '0 0 10px rgba(var(--primary), 0.2)',
         'inner-glow': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
         'card-hover': '0 20px 40px -12px rgba(0, 0, 0, 0.15)',
@@ -146,13 +150,15 @@ const config: Partial<Config> = {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-gold': 'linear-gradient(135deg, #D4AF37 0%, #F5E19A 50%, #D4AF37 100%)',
-        'gradient-gold-dark': 'linear-gradient(135deg, #1A1A1A 0%, #2E250B 50%, #1A1A1A 100%)',
-        'gradient-green': 'linear-gradient(135deg, #008751 0%, #00B36B 50%, #008751 100%)',
-        'gradient-green-dark': 'linear-gradient(135deg, #1A1A1A 0%, #001B10 50%, #1A1A1A 100%)',
+        // Brand gradients
+        'gradient-green': 'linear-gradient(135deg, #059669 0%, #10b981 50%, #059669 100%)',
+        'gradient-green-dark': 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #064e3b 100%)',
+        'gradient-gold': 'linear-gradient(135deg, #D4AF37 0%, #fde047 50%, #D4AF37 100%)',
+        'gradient-gold-dark': 'linear-gradient(135deg, #854d0e 0%, #a16207 50%, #854d0e 100%)',
+        'gradient-brand': 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        'gradient-hero': 'linear-gradient(135deg, #059669 0%, #0d9488 50%, #0891b2 100%)',
         'shimmer': 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-        'mesh-ghana': 'radial-gradient(at 40% 20%, rgba(212, 175, 55, 0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(212, 175, 55, 0.1) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(212, 175, 55, 0.05) 0px, transparent 50%)',
-        'mesh-nigeria': 'radial-gradient(at 40% 20%, rgba(0, 135, 81, 0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(0, 135, 81, 0.1) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(0, 135, 81, 0.05) 0px, transparent 50%)',
+        'mesh-brand': 'radial-gradient(at 40% 20%, rgba(5, 150, 105, 0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(212, 175, 55, 0.1) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(5, 150, 105, 0.05) 0px, transparent 50%)',
       },
       keyframes: {
         'accordion-down': {

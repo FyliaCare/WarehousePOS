@@ -1,37 +1,49 @@
 // ============================================
 // THEME CONFIGURATION
 // Design system tokens for WarehousePOS
+// UNIFIED THEME: Green, Gold, Black & White
+// For Ghana 🇬🇭 and Nigeria 🇳🇬
 // ============================================
 
 export const theme = {
   colors: {
-    // Primary Brand
+    // Primary Brand - Green
     primary: {
-      DEFAULT: '#7c3aed',
-      light: '#a78bfa',
-      dark: '#5b21b6',
-      50: '#f5f3ff',
-      100: '#ede9fe',
-      200: '#ddd6fe',
-      300: '#c4b5fd',
-      400: '#a78bfa',
-      500: '#8b5cf6',
-      600: '#7c3aed',
-      700: '#6d28d9',
-      800: '#5b21b6',
-      900: '#4c1d95',
+      DEFAULT: '#059669',
+      light: '#10b981',
+      dark: '#047857',
+      50: '#ecfdf5',
+      100: '#d1fae5',
+      200: '#a7f3d0',
+      300: '#6ee7b7',
+      400: '#34d399',
+      500: '#10b981',
+      600: '#059669',
+      700: '#047857',
+      800: '#065f46',
+      900: '#064e3b',
     },
 
-    // Country Accents
-    ghana: {
-      gold: '#fcd116',
-      green: '#006b3f',
-      red: '#ce1126',
+    // Accent - Gold
+    gold: {
+      DEFAULT: '#D4AF37',
+      light: '#E5C76B',
+      dark: '#B8960C',
+      50: '#FDF9E7',
+      100: '#FCF3CF',
+      200: '#F9E79F',
+      300: '#F5DB6E',
+      400: '#E5C76B',
+      500: '#D4AF37',
+      600: '#B8960C',
+      700: '#9A7D0A',
+      800: '#7D6608',
+      900: '#5F4E06',
     },
-    nigeria: {
-      green: '#008751',
-      white: '#ffffff',
-    },
+
+    // Neutral - Black & White
+    black: '#0f172a',
+    white: '#ffffff',
 
     // Semantic
     success: {
@@ -40,9 +52,9 @@ export const theme = {
       dark: '#059669',
     },
     warning: {
-      DEFAULT: '#f59e0b',
-      light: '#fbbf24',
-      dark: '#d97706',
+      DEFAULT: '#D4AF37',
+      light: '#E5C76B',
+      dark: '#B8960C',
     },
     error: {
       DEFAULT: '#ef4444',
@@ -50,9 +62,9 @@ export const theme = {
       dark: '#dc2626',
     },
     info: {
-      DEFAULT: '#3b82f6',
-      light: '#60a5fa',
-      dark: '#2563eb',
+      DEFAULT: '#059669',
+      light: '#10b981',
+      dark: '#047857',
     },
   },
 
@@ -123,46 +135,46 @@ export const theme = {
 export const cssVariables = {
   light: {
     '--background': '0 0% 100%',
-    '--foreground': '222.2 84% 4.9%',
+    '--foreground': '222 47% 11%',
     '--card': '0 0% 100%',
-    '--card-foreground': '222.2 84% 4.9%',
+    '--card-foreground': '222 47% 11%',
     '--popover': '0 0% 100%',
-    '--popover-foreground': '222.2 84% 4.9%',
-    '--primary': '262 83% 58%',
-    '--primary-foreground': '210 40% 98%',
-    '--secondary': '210 40% 96.1%',
-    '--secondary-foreground': '222.2 47.4% 11.2%',
-    '--muted': '210 40% 96.1%',
-    '--muted-foreground': '215.4 16.3% 46.9%',
-    '--accent': '210 40% 96.1%',
-    '--accent-foreground': '222.2 47.4% 11.2%',
-    '--destructive': '0 84.2% 60.2%',
-    '--destructive-foreground': '210 40% 98%',
-    '--border': '214.3 31.8% 91.4%',
-    '--input': '214.3 31.8% 91.4%',
-    '--ring': '262 83% 58%',
-    '--radius': '0.75rem',
+    '--popover-foreground': '222 47% 11%',
+    '--primary': '160 84% 39%',
+    '--primary-foreground': '0 0% 100%',
+    '--secondary': '152 76% 97%',
+    '--secondary-foreground': '160 84% 39%',
+    '--muted': '210 40% 96%',
+    '--muted-foreground': '215 16% 47%',
+    '--accent': '43 74% 49%',
+    '--accent-foreground': '222 47% 11%',
+    '--destructive': '0 84% 60%',
+    '--destructive-foreground': '0 0% 100%',
+    '--border': '214 32% 91%',
+    '--input': '214 32% 91%',
+    '--ring': '160 84% 39%',
+    '--radius': '0.5rem',
   },
   dark: {
-    '--background': '222.2 84% 4.9%',
+    '--background': '222 47% 6%',
     '--foreground': '210 40% 98%',
-    '--card': '222.2 84% 4.9%',
+    '--card': '222 47% 9%',
     '--card-foreground': '210 40% 98%',
-    '--popover': '222.2 84% 4.9%',
+    '--popover': '222 47% 9%',
     '--popover-foreground': '210 40% 98%',
-    '--primary': '262 83% 58%',
-    '--primary-foreground': '210 40% 98%',
-    '--secondary': '217.2 32.6% 17.5%',
+    '--primary': '160 84% 45%',
+    '--primary-foreground': '0 0% 100%',
+    '--secondary': '217 33% 15%',
     '--secondary-foreground': '210 40% 98%',
-    '--muted': '217.2 32.6% 17.5%',
-    '--muted-foreground': '215 20.2% 65.1%',
-    '--accent': '217.2 32.6% 17.5%',
-    '--accent-foreground': '210 40% 98%',
-    '--destructive': '0 62.8% 30.6%',
-    '--destructive-foreground': '210 40% 98%',
-    '--border': '217.2 32.6% 17.5%',
-    '--input': '217.2 32.6% 17.5%',
-    '--ring': '262 83% 58%',
-    '--radius': '0.75rem',
+    '--muted': '217 33% 15%',
+    '--muted-foreground': '215 20% 55%',
+    '--accent': '43 74% 49%',
+    '--accent-foreground': '222 47% 11%',
+    '--destructive': '0 62% 50%',
+    '--destructive-foreground': '0 0% 100%',
+    '--border': '217 33% 17%',
+    '--input': '217 33% 17%',
+    '--ring': '160 84% 45%',
+    '--radius': '0.5rem',
   },
 };
