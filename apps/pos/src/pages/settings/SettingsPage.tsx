@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Store,
@@ -6,16 +6,19 @@ import {
   Receipt,
   Palette,
   CreditCard,
-  ChevronRight,
   Moon,
   Sun,
   Monitor,
+  MapPin,
 } from 'lucide-react';
 import { Button, Card, Input, Switch } from '@warehousepos/ui';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { cn } from '@warehousepos/utils';
+import { supabase } from '@/lib/supabase';
+import { StoreLocationPicker, type StoreLocation } from '@/components/maps';
+import type { CountryCode } from '@warehousepos/types';
 
 type SettingsTab = 'profile' | 'store' | 'pos' | 'notifications' | 'appearance' | 'billing';
 
@@ -98,35 +101,7 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'store' && (
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Store Settings</h2>
-              <div className="space-y-4 max-w-md">
-                <Input
-                  label="Business Name"
-                  defaultValue={tenant?.name}
-                />
-                <Input
-                  label="Store Name"
-                  defaultValue={store?.name}
-                />
-                <Input
-                  label="Address"
-                  defaultValue={store?.address}
-                />
-                <Input
-                  label="Phone"
-                  defaultValue={store?.phone}
-                />
-                <Input
-                  label="Email"
-                  type="email"
-                  defaultValue={store?.email}
-                />
-                <Button onClick={() => toast.success('Store settings updated!')}>
-                  Save Changes
-                </Button>
-              </div>
-            </Card>
+            <StoreSettingsTab store={store} tenant={tenant} />
           )}
 
           {activeTab === 'pos' && (
@@ -311,12 +286,159 @@ export function SettingsPage() {
                 </div>
                 <Button variant="outline">
                   Manage Subscription
-                  <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             </Card>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Store Settings Tab Component
+function StoreSettingsTab({ store, tenant }: { store: any; tenant: any }) {
+  const country = (tenant?.country === 'NG' ? 'NG' : 'GH') as CountryCode;
+  
+  const [formData, setFormData] = useState({
+    name: store?.name || '',
+    address: store?.address || '',
+    phone: store?.phone || '',
+    email: store?.email || '',
+  });
+  
+  const [storeLocation, setStoreLocation] = useState<StoreLocation | null>(
+    store?.latitude && store?.longitude 
+      ? { lat: store.latitude, lng: store.longitude }
+      : null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => {
+    if (store) {
+      setFormData({
+        name: store.name || '',
+        address: store.address || '',
+        phone: store.phone || '',
+        email: store.email || '',
+      });
+      if (store.latitude && store.longitude) {
+        setStoreLocation({ lat: store.latitude, lng: store.longitude });
+      }
+    }
+  }, [store]);
+
+  const handleSave = async () => {
+    if (!store?.id) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .update({
+          name: formData.name,
+          address: formData.address,
+          phone: formData.phone,
+          email: formData.email,
+          latitude: storeLocation?.lat,
+          longitude: storeLocation?.lng,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', store.id);
+
+      if (error) throw error;
+      toast.success('Store settings updated!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save store settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Basic Info Card */}
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-6">Store Information</h2>
+        <div className="space-y-4 max-w-md">
+          <Input
+            label="Business Name"
+            defaultValue={tenant?.name}
+            disabled
+            hint="Contact support to change business name"
+          />
+          <Input
+            label="Store Name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
+          <Input
+            label="Address"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          />
+          <Input
+            label="Phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
+        </div>
+      </Card>
+
+      {/* Store Location Card */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Store Location</h2>
+            <p className="text-sm text-muted-foreground">
+              Set your store location for delivery zone mapping
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowMap(!showMap)}
+            className="flex items-center gap-2"
+          >
+            <MapPin className="w-4 h-4" />
+            {showMap ? 'Hide Map' : 'Set Location'}
+          </Button>
+        </div>
+
+        {storeLocation && (
+          <div className="mb-4 p-3 bg-muted rounded-lg flex items-center gap-3">
+            <MapPin className="w-5 h-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Location Set</p>
+              <p className="text-xs text-muted-foreground font-mono">
+                {storeLocation.lat.toFixed(6)}, {storeLocation.lng.toFixed(6)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {showMap && (
+          <StoreLocationPicker
+            country={country}
+            location={storeLocation}
+            onLocationChange={setStoreLocation}
+            height="400px"
+            className="mt-4"
+          />
+        )}
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </Button>
       </div>
     </div>
   );

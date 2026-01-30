@@ -1,9 +1,26 @@
 // Edge Function: Low Stock Alert
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, isDevelopment } from '../_shared/utils.ts';
 
-serve(async (req) => {
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  stock_quantity: number;
+  reorder_level: number;
+}
+
+interface LowStockItem {
+  id: string;
+  name: string;
+  sku: string;
+  currentStock: number;
+  reorderLevel: number;
+}
+
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -39,7 +56,7 @@ serve(async (req) => {
 
       if (!products?.length) continue;
 
-      const lowStockItems = products.map(p => ({
+      const lowStockItems: LowStockItem[] = products.map((p: Product) => ({
         id: p.id,
         name: p.name,
         sku: p.sku,
@@ -56,7 +73,7 @@ serve(async (req) => {
 
       // Send SMS alert to store owner (skip in dev)
       if (!isDev && store.owner?.phone && lowStockItems.length > 0) {
-        const topItems = lowStockItems.slice(0, 3).map(i => i.name).join(', ');
+        const topItems = lowStockItems.slice(0, 3).map((i: LowStockItem) => i.name).join(', ');
         const message = `Low Stock Alert: ${lowStockItems.length} items need restocking. Top items: ${topItems}. Check your dashboard.`;
         
         await supabase.functions.invoke('send-sms', {

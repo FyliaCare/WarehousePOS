@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -14,8 +14,12 @@ import {
   Store,
   Bell,
   ChevronDown,
+  ChevronRight,
   Truck,
+  Bike,
   BarChart3,
+  MapPin,
+  Send,
 } from 'lucide-react';
 import { Avatar } from '@warehousepos/ui';
 import { useAuthStore } from '@/stores/authStore';
@@ -23,7 +27,14 @@ import { cn } from '@warehousepos/utils';
 import { formatPhone } from '@/lib/supabase-auth';
 import type { CountryCode } from '@warehousepos/types';
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  children?: NavItem[];
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'POS', href: '/pos', icon: ShoppingCart },
   { name: 'Products', href: '/products', icon: Package },
@@ -31,7 +42,17 @@ const navigation = [
   { name: 'Stock', href: '/stock', icon: Store },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Sales', href: '/sales', icon: Receipt },
-  { name: 'Deliveries', href: '/deliveries', icon: Truck },
+  { 
+    name: 'Deliveries', 
+    href: '/deliveries', 
+    icon: Truck,
+    children: [
+      { name: 'All Deliveries', href: '/deliveries', icon: Package },
+      { name: 'Dispatch', href: '/deliveries/dispatch', icon: Send },
+      { name: 'Zones', href: '/deliveries/zones', icon: MapPin },
+    ]
+  },
+  { name: 'Riders', href: '/riders', icon: Bike },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -39,8 +60,10 @@ const navigation = [
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [expandedNav, setExpandedNav] = useState<string | null>(null);
   const { user, tenant, store, signOut } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const country: CountryCode = tenant?.country === 'NG' ? 'NG' : 'GH';
   const isGhana = country === 'GH';
@@ -140,26 +163,83 @@ export function AppLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
-          {navigation.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                  isActive
-                    ? isGhana 
-                      ? 'bg-gradient-to-r from-ghana-gold-500 to-ghana-gold-600 text-black shadow-md' 
-                      : 'bg-gradient-to-r from-nigeria-green-500 to-nigeria-green-600 text-white shadow-md'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </NavLink>
-          ))}
+          {navigation.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = expandedNav === item.name || (hasChildren && location.pathname.startsWith(item.href));
+            const isActiveParent = hasChildren && location.pathname.startsWith(item.href);
+            
+            if (hasChildren) {
+              return (
+                <div key={item.name}>
+                  <button
+                    onClick={() => setExpandedNav(isExpanded ? null : item.name)}
+                    className={cn(
+                      'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                      isActiveParent
+                        ? isGhana 
+                          ? 'bg-ghana-gold-100 text-ghana-gold-900 dark:bg-ghana-gold-500/20 dark:text-ghana-gold-400' 
+                          : 'bg-nigeria-green-100 text-nigeria-green-900 dark:bg-nigeria-green-500/20 dark:text-nigeria-green-400'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5" />
+                      {item.name}
+                    </span>
+                    <ChevronRight className={cn(
+                      'w-4 h-4 transition-transform',
+                      isExpanded && 'rotate-90'
+                    )} />
+                  </button>
+                  {isExpanded && item.children && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.name}
+                          to={child.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                              isActive
+                                ? isGhana 
+                                  ? 'bg-gradient-to-r from-ghana-gold-500 to-ghana-gold-600 text-black shadow-md' 
+                                  : 'bg-gradient-to-r from-nigeria-green-500 to-nigeria-green-600 text-white shadow-md'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            )
+                          }
+                        >
+                          <child.icon className="w-4 h-4" />
+                          {child.name}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            return (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? isGhana 
+                        ? 'bg-gradient-to-r from-ghana-gold-500 to-ghana-gold-600 text-black shadow-md' 
+                        : 'bg-gradient-to-r from-nigeria-green-500 to-nigeria-green-600 text-white shadow-md'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                {item.name}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Sidebar footer */}

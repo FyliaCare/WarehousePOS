@@ -11,13 +11,21 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/auth/RegisterPage';
 import { CountrySelectPage } from '@/pages/auth/CountrySelectPage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { POSPage } from '@/pages/POSPage';
+import { POSLayout } from '@/pages/pos/POSLayout';
 import { ProductsPage } from '@/pages/products/ProductsPage';
 import { CategoriesPage } from '@/pages/products/CategoriesPage';
 import { StockPage } from '@/pages/inventory/StockPage';
 import { CustomersPage } from '@/pages/customers/CustomersPage';
 import { SalesPage } from '@/pages/sales/SalesPage';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
+import DeliveriesPage from '@/pages/DeliveriesPage';
+import RidersPage from '@/pages/RidersPage';
+import ReportsPage from '@/pages/ReportsPage';
+
+// Delivery Management
+import DeliveryZonesPage from '@/pages/delivery/DeliveryZonesPage';
+import DeliveryAssignmentsPage from '@/pages/delivery/DeliveryAssignmentsPage';
+import TrackingPage from '@/pages/tracking/TrackingPage';
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -81,7 +89,21 @@ function App() {
           />
         </Route>
 
-        {/* App routes */}
+        {/* POS - Full screen layout (no sidebar) */}
+        <Route
+          path="/pos"
+          element={
+            <ProtectedRoute>
+              <POSLayout />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Public Tracking Page - No auth required */}
+        <Route path="/track/:trackingCode" element={<TrackingPage />} />
+        <Route path="/track" element={<TrackingPage />} />
+
+        {/* App routes with sidebar */}
         <Route
           element={
             <ProtectedRoute>
@@ -90,12 +112,16 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/pos" element={<POSPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/stock" element={<StockPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/deliveries" element={<DeliveriesPage />} />
+          <Route path="/deliveries/zones" element={<DeliveryZonesPage />} />
+          <Route path="/deliveries/dispatch" element={<DeliveryAssignmentsPage />} />
+          <Route path="/riders" element={<RidersPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

@@ -175,7 +175,26 @@ export async function verifyOTP(
     
     if (error) {
       console.error('Verify OTP error:', error);
-      return { success: false, error: error.message || 'Failed to verify code' };
+      // Try to extract actual error message from response
+      let errorMessage = 'Failed to verify code';
+      if (data?.error) {
+        errorMessage = data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      // FunctionsHttpError contains the context - try to get detailed message
+      if (error.context?.body) {
+        try {
+          const bodyText = await error.context.text();
+          const bodyJson = JSON.parse(bodyText);
+          if (bodyJson.error) {
+            errorMessage = bodyJson.error;
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+      return { success: false, error: errorMessage };
     }
     
     if (!data?.success) {
@@ -183,20 +202,21 @@ export async function verifyOTP(
     }
     
     // If we got a session, set it in Supabase client
+    // Use fire-and-forget to prevent blocking on auth state listeners
     if (data.session) {
       console.log('Setting session...');
-      try {
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
+      supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      }).then(() => {
         console.log('Session set successfully');
-      } catch (sessionError) {
+      }).catch((sessionError) => {
         console.error('Failed to set session:', sessionError);
-        // Continue anyway - the user was created
-      }
+      });
+      // Don't await - let it complete in background
     }
     
+    console.log('Returning success from verifyOTP');
     return {
       success: true,
       user: data.user,
@@ -245,8 +265,12 @@ export async function checkUserProfile(userId: string): Promise<{
 }
 
 /**
- * Create user profile after phone verification
+ * Create or update user profile after phone verification
  * Called during registration after OTP is verified
+ * 
+ * OPTIMIZED: Single check + update/create pattern
+ * The database trigger auto-creates a profile when auth.user is created.
+ * This function handles both cases efficiently.
  */
 export async function createUserProfile(params: {
   userId: string;
@@ -259,9 +283,71 @@ export async function createUserProfile(params: {
   const { userId, phone, country, businessName, fullName, email } = params;
   const formattedPhone = formatPhone(phone, country);
   
+  console.log('createUserProfile (optimized) called with:', { userId, businessName, fullName });
+  const startTime = Date.now();
+  
   try {
-    // Generate unique slug for tenant
+    // Single query to check if profile exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id, tenant_id, store_id')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    console.log('Profile check result:', { existingUser, checkError, took: Date.now() - startTime + 'ms' });
+    
+    if (checkError) {
+      console.error('Profile check error:', checkError);
+    }
+    
+    if (existingUser && existingUser.tenant_id) {
+      // FAST PATH: Profile exists with tenant (created by trigger) - just update names
+      const tenantId = existingUser.tenant_id;
+      
+      console.log('Updating existing profile with tenant:', tenantId);
+      
+      // Parallel updates for speed
+      const [tenantResult, userResult] = await Promise.all([
+        // Update tenant name
+        supabase.from('tenants').update({ 
+          name: businessName,
+          country,
+          currency: country === 'GH' ? 'GHS' : 'NGN',
+        }).eq('id', tenantId),
+        
+        // Update user profile
+        supabase.from('users').update({
+          full_name: fullName,
+          phone: formattedPhone,
+          email: email || `${formattedPhone.replace(/\+/g, '')}@phone.warehousepos.app`,
+        }).eq('id', userId).select('*, tenant:tenants(*), store:stores(*)').single(),
+      ]);
+      
+      console.log('Update results:', { tenantResult, userResult });
+      
+      if (userResult.error) {
+        console.error('User update error:', userResult.error);
+        return { success: false, error: 'Failed to update profile: ' + userResult.error.message };
+      }
+      
+      const userData = userResult.data as any;
+      console.log('Profile updated in:', Date.now() - startTime, 'ms');
+      
+      return {
+        success: true,
+        user: userData,
+        tenant: userData.tenant,
+        store: userData.store,
+      };
+    }
+    
+    // SLOW PATH: No existing profile OR profile without tenant - create fresh
+    console.log('Creating new profile from scratch (no existing profile or no tenant)...');
+    
     const slug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '') + '-' + Date.now().toString(36);
+    const userEmail = email || `${formattedPhone.replace(/\+/g, '')}@phone.warehousepos.app`;
+    
+    console.log('Creating tenant with slug:', slug);
     
     // Create tenant
     const { data: tenant, error: tenantError } = await supabase
@@ -277,14 +363,18 @@ export async function createUserProfile(params: {
       .select()
       .single();
     
+    console.log('Tenant creation result:', { tenant, tenantError });
+    
     if (tenantError || !tenant) {
       console.error('Tenant creation error:', tenantError);
-      return { success: false, error: 'Failed to create business' };
+      return { success: false, error: 'Failed to create business: ' + (tenantError?.message || 'Unknown error') };
     }
     
     const tenantData = tenant as any;
+    console.log('Tenant created:', tenantData.id);
     
-    // Create default store
+    // Create store
+    console.log('Creating store...');
     const { data: store, error: storeError } = await supabase
       .from('stores')
       .insert({
@@ -296,39 +386,44 @@ export async function createUserProfile(params: {
       .select()
       .single();
     
+    console.log('Store creation result:', { store, storeError });
+    
     if (storeError || !store) {
       console.error('Store creation error:', storeError);
-      // Rollback tenant
       await supabase.from('tenants').delete().eq('id', tenantData.id);
-      return { success: false, error: 'Failed to create store' };
+      return { success: false, error: 'Failed to create store: ' + (storeError?.message || 'Unknown error') };
     }
     
     const storeData = store as any;
+    console.log('Store created:', storeData.id);
     
-    // Create user profile linked to auth.user
+    // Create user profile
+    console.log('Creating user profile...');
     const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
-        id: userId, // Same ID as auth.users
+        id: userId,
         tenant_id: tenantData.id,
         store_id: storeData.id,
         phone: formattedPhone,
         full_name: fullName,
-        email: email || null,
+        email: userEmail,
         role: 'owner' as const,
         is_active: true,
       } as any)
       .select()
       .single();
     
+    console.log('User profile creation result:', { user, userError });
+    
     if (userError) {
       console.error('User profile creation error:', userError);
-      // Rollback
       await supabase.from('stores').delete().eq('id', storeData.id);
       await supabase.from('tenants').delete().eq('id', tenantData.id);
-      return { success: false, error: 'Failed to create user profile' };
+      return { success: false, error: 'Failed to create user profile: ' + userError.message };
     }
     
+    console.log('Profile created in:', Date.now() - startTime, 'ms');
     return {
       success: true,
       user,

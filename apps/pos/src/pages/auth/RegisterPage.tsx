@@ -160,6 +160,7 @@ export function RegisterPage() {
       return;
     }
     
+    console.log('Creating user profile...', { tempAuthUserId, businessName, fullName, phone, country });
     setIsLoading(true);
     try {
       const result = await createUserProfile({
@@ -170,6 +171,8 @@ export function RegisterPage() {
         fullName: fullName.trim(),
         email: email.trim() || undefined,
       });
+      
+      console.log('Create profile result:', result);
       
       if (result.success) {
         setStep('success');
@@ -388,6 +391,7 @@ export function RegisterPage() {
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                         onKeyPress={handleKeyPress}
                         placeholder={isGhana ? '24 123 4567' : '803 123 4567'}
+                        autoComplete="tel-national"
                         className="w-full pl-28 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                       />
                     </div>
@@ -438,6 +442,7 @@ export function RegisterPage() {
                       placeholder="000000"
                       maxLength={6}
                       autoFocus
+                      autoComplete="one-time-code"
                       className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 text-xl text-center tracking-[0.75em] placeholder-gray-300"
                     />
                   </div>
@@ -498,6 +503,7 @@ export function RegisterPage() {
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder={isGhana ? "e.g., Kwame's Electronics" : "e.g., Ade's Superstore"}
+                        autoComplete="organization"
                         className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                       />
                     </div>
@@ -518,6 +524,7 @@ export function RegisterPage() {
                         onChange={(e) => setFullName(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder={isGhana ? "e.g., Kwame Mensah" : "e.g., Adewale Johnson"}
+                        autoComplete="name"
                         className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                       />
                     </div>
@@ -538,6 +545,7 @@ export function RegisterPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder="your@email.com"
+                        autoComplete="email"
                         className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                       />
                     </div>

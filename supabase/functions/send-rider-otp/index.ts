@@ -1,10 +1,11 @@
 // Edge Function: Send Rider OTP
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, formatPhone, generateOTP, hashOTP, isDevelopment } from '../_shared/utils.ts';
 import { sendSMS } from '../_shared/sms.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

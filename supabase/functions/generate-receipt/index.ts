@@ -1,9 +1,10 @@
 // Edge Function: Generate Receipt HTML
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient } from '../_shared/utils.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

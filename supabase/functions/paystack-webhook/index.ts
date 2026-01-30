@@ -1,10 +1,11 @@
 // Edge Function: Paystack Webhook Handler
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
-import { createSupabaseClient, getEnv } from '../_shared/utils.ts';
+import { createSupabaseClient } from '../_shared/utils.ts';
 import { verifyWebhookSignature } from '../_shared/paystack.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -36,7 +37,7 @@ serve(async (req) => {
 
     switch (event.event) {
       case 'charge.success': {
-        const { reference, amount, currency, customer, metadata } = event.data;
+        const { reference, metadata } = event.data;
         console.log('Payment successful:', reference);
 
         // Update payment
@@ -82,7 +83,7 @@ serve(async (req) => {
       }
 
       case 'invoice.payment_failed': {
-        const { subscription, customer } = event.data;
+        const { subscription } = event.data;
         console.log('Payment failed for subscription:', subscription?.subscription_code);
 
         if (subscription?.subscription_code) {

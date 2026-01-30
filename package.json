@@ -15,6 +15,7 @@
     "build:delivery": "pnpm --filter @warehousepos/delivery build",
     "build:portal": "pnpm --filter @warehousepos/portal build",
     "build:admin": "pnpm --filter @warehousepos/admin build",
+    "build:marketing": "pnpm --filter @warehousepos/marketing build",
     "build:all": "pnpm -r build",
     "lint": "pnpm -r lint",
     "type-check": "pnpm -r type-check",

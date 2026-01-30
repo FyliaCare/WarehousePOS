@@ -5,6 +5,9 @@ import { Toaster } from '@warehousepos/ui';
 import App from './App';
 import { initSentry, SentryErrorBoundary } from './lib/sentry';
 import './index.css';
+// Leaflet CSS for maps
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 // Initialize Sentry error monitoring
 initSentry();

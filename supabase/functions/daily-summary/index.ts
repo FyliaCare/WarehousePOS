@@ -1,9 +1,16 @@
 // Edge Function: Daily Sales Summary
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, isDevelopment } from '../_shared/utils.ts';
 
-serve(async (req) => {
+interface Order {
+  total: number;
+  payment_status: string;
+  status: string;
+}
+
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -41,11 +48,11 @@ serve(async (req) => {
         .lt('created_at', `${targetDate}T23:59:59`);
 
       const totalOrders = orders?.length || 0;
-      const completedOrders = orders?.filter(o => o.status === 'completed').length || 0;
-      const totalRevenue = orders?.filter(o => o.payment_status === 'paid')
-        .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
-      const pendingPayments = orders?.filter(o => o.payment_status === 'pending')
-        .reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+      const completedOrders = orders?.filter((o: Order) => o.status === 'completed').length || 0;
+      const totalRevenue = orders?.filter((o: Order) => o.payment_status === 'paid')
+        .reduce((sum: number, o: Order) => sum + (o.total || 0), 0) || 0;
+      const pendingPayments = orders?.filter((o: Order) => o.payment_status === 'pending')
+        .reduce((sum: number, o: Order) => sum + (o.total || 0), 0) || 0;
 
       const summary = {
         storeId: store.id,

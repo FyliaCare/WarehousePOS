@@ -1,5 +1,5 @@
 // Edge Function: Send OTP via SMS (mNotify/Termii)
-// v5 - Clean rewrite with shared utilities
+// v6 - OPTIMIZED: Parallel operations, faster rate limiting
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, formatPhone, generateOTP, hashOTP, isDevelopment } from '../_shared/utils.ts';
@@ -10,7 +10,8 @@ serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   const isDev = isDevelopment();
-  console.log('phone-otp-send v5 - isDev:', isDev);
+  const startTime = Date.now();
+  console.log('phone-otp-send v6 (optimized) - isDev:', isDev);
 
   try {
     const { phone, country, purpose = 'login' } = await req.json();
@@ -32,45 +33,68 @@ serve(async (req) => {
       });
     }
 
-    // PRODUCTION: Full flow with database and SMS
+    // PRODUCTION: Optimized flow - do operations in parallel where possible
     const supabase = createSupabaseClient();
 
-    // Rate limiting (1 OTP per 60 seconds)
-    const { data: recentOtp } = await supabase
+    // Generate OTP hash while checking rate limit in parallel
+    const otpHashPromise = hashOTP(otp);
+    const rateLimitPromise = supabase
       .from('phone_otps')
       .select('created_at')
       .eq('phone', formattedPhone)
       .gte('created_at', new Date(Date.now() - 60000).toISOString())
-      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    const [otpHash, { data: recentOtp }] = await Promise.all([otpHashPromise, rateLimitPromise]);
 
     if (recentOtp) {
       const waitTime = Math.ceil((60000 - (Date.now() - new Date(recentOtp.created_at).getTime())) / 1000);
       return errorResponse(`Please wait ${waitTime} seconds before requesting a new code`, 429);
     }
 
-    // Store OTP hash
-    const otpHash = await hashOTP(otp);
+    console.log('Rate limit passed, took:', Date.now() - startTime, 'ms');
+
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    await supabase.from('phone_otps').delete().eq('phone', formattedPhone);
-    
-    const { error: insertError } = await supabase.from('phone_otps').insert({
-      phone: formattedPhone,
-      otp_hash: otpHash,
-      purpose,
-      expires_at: expiresAt,
-    });
+    // UPSERT instead of delete + insert (single operation instead of two)
+    const { error: upsertError } = await supabase
+      .from('phone_otps')
+      .upsert({
+        phone: formattedPhone,
+        otp_hash: otpHash,
+        purpose,
+        expires_at: expiresAt,
+        verified_at: null, // Reset verification status
+        created_at: new Date().toISOString(),
+      }, { 
+        onConflict: 'phone,purpose',
+        ignoreDuplicates: false 
+      });
 
-    if (insertError) {
-      console.error('OTP insert error:', insertError);
-      return errorResponse('Failed to generate OTP', 500);
+    if (upsertError) {
+      // Fallback to delete + insert if upsert fails (constraint might not exist)
+      console.log('Upsert failed, falling back to delete+insert:', upsertError.message);
+      await supabase.from('phone_otps').delete().eq('phone', formattedPhone);
+      const { error: insertError } = await supabase.from('phone_otps').insert({
+        phone: formattedPhone,
+        otp_hash: otpHash,
+        purpose,
+        expires_at: expiresAt,
+      });
+      if (insertError) {
+        console.error('OTP insert error:', insertError);
+        return errorResponse('Failed to generate OTP', 500);
+      }
     }
 
-    // Send SMS
-    const message = `Your WarehousePOS verification code is: ${otp}. Valid for 5 minutes.`;
+    console.log('OTP stored, took:', Date.now() - startTime, 'ms');
+
+    // Send SMS - this is the slowest part (external API call)
+    const message = `Your WarehousePOS code: ${otp}. Valid 5 mins.`;  // Shorter message = faster delivery
     const smsSent = await sendSMS(formattedPhone, message, country);
+
+    console.log('SMS sent, total time:', Date.now() - startTime, 'ms');
 
     if (!smsSent) {
       return errorResponse('Failed to send SMS. Please try again.', 500);

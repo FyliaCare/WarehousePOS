@@ -4,8 +4,8 @@
 
 /* ============================================
    WAREHOUSEPOS DESIGN SYSTEM
-   🇬🇭 Ghana Theme: Gold & Black (Luxurious)
-   🇳🇬 Nigeria Theme: Green & Black (Bold)
+   🇬🇭 Ghana Theme: Gold, Black & White
+   🇳🇬 Nigeria Theme: Green, White & Black
    ============================================ */
 
 /* PWA Safe Area Support */
@@ -18,86 +18,91 @@
 
 @layer base {
   /* ===========================================
-     DEFAULT THEME (Ghana - Gold & Black)
+     DEFAULT THEME (Ghana - Gold, Black & White)
+     Vibrant Gold: #FFD000 / HSL 48 100% 50%
      =========================================== */
   :root {
     /* Base Colors */
     --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    --foreground: 0 0% 8%;
     
     /* Cards & Surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 0 0% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 0 0% 8%;
     
-    /* Primary - Ghana Gold */
-    --primary: 43 75% 52%;
-    --primary-foreground: 0 0% 10%;
+    /* Primary - Ghana Vibrant Gold */
+    --primary: 48 100% 50%;
+    --primary-foreground: 0 0% 8%;
     
     /* Secondary */
-    --secondary: 43 30% 95%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 48 100% 97%;
+    --secondary-foreground: 0 0% 8%;
     
     /* Muted */
-    --muted: 43 20% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 48 30% 96%;
+    --muted-foreground: 0 0% 40%;
     
-    /* Accent */
-    --accent: 43 75% 52%;
-    --accent-foreground: 0 0% 10%;
+    /* Accent - Gold */
+    --accent: 48 100% 50%;
+    --accent-foreground: 0 0% 8%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
     /* Borders & Inputs */
-    --border: 43 20% 90%;
-    --input: 43 20% 90%;
-    --ring: 43 75% 52%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 48 100% 50%;
     
     /* Radius */
-    --radius: 0.75rem;
+    --radius: 0.5rem;
     
-    /* Country Accent Colors */
-    --country-primary: 43 75% 52%;
-    --country-primary-rgb: 212, 175, 55;
+    /* Country Brand Colors */
+    --brand-primary: 48 100% 50%;
+    --brand-dark: 0 0% 8%;
+    --brand-light: 0 0% 100%;
+    --brand-primary-hex: #FFD000;
+    --brand-hover: 48 100% 45%;
   }
 
   /* ===========================================
-     DARK MODE (Gold & Black - Luxurious Dark)
+     DARK MODE (Ghana - Gold & Black Luxury)
      =========================================== */
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 43 20% 95%;
+    --background: 0 0% 6%;
+    --foreground: 0 0% 98%;
     
-    --card: 0 0% 10%;
-    --card-foreground: 43 20% 95%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 43 20% 95%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
     
-    --primary: 43 75% 52%;
-    --primary-foreground: 0 0% 10%;
+    --primary: 48 100% 50%;
+    --primary-foreground: 0 0% 8%;
     
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 43 20% 95%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
     
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
     
-    --accent: 43 75% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 48 100% 45%;
+    --accent-foreground: 0 0% 8%;
     
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 43 75% 52%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 48 100% 50%;
   }
 
   /* ===========================================
-     NIGERIA THEME (Green & Black)
+     NIGERIA THEME (Green, White & Black)
+     Nigeria Green: #008751 / HSL 153 100% 27%
      =========================================== */
   .theme-nigeria {
     --primary: 153 100% 27%;
@@ -105,23 +110,28 @@
     --accent: 153 100% 27%;
     --accent-foreground: 0 0% 100%;
     --ring: 153 100% 27%;
-    --country-primary: 153 100% 27%;
-    --country-primary-rgb: 0, 135, 81;
     
-    --secondary: 153 30% 95%;
+    --secondary: 153 40% 97%;
     --muted: 153 20% 96%;
-    --border: 153 20% 90%;
-    --input: 153 20% 90%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    
+    /* Country Brand Colors */
+    --brand-primary: 153 100% 27%;
+    --brand-dark: 0 0% 8%;
+    --brand-light: 0 0% 100%;
+    --brand-primary-hex: #008751;
+    --brand-hover: 153 100% 22%;
   }
 
   .theme-nigeria.dark {
     --primary: 153 100% 35%;
     --primary-foreground: 0 0% 100%;
     --accent: 153 100% 30%;
-    --secondary: 153 10% 15%;
-    --muted: 153 10% 15%;
-    --border: 153 10% 20%;
-    --input: 153 10% 20%;
+    --secondary: 0 0% 12%;
+    --muted: 0 0% 12%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
   }
 }
 

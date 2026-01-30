@@ -1,28 +1,77 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, Loader2 } from 'lucide-react';
-import { Button, Input } from '@warehousepos/ui';
+import { Loader2, Truck, Shield, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+
+// Premium theme configuration
+const themes = {
+  GH: {
+    primary: '#FFD000',
+    primaryLight: '#FFF8E0',
+    primaryMid: '#FFE566',
+    primaryDark: '#D4A900',
+    accent: '#1A1A1A',
+    textOnPrimary: '#1A1400',
+    flag: '🇬🇭',
+    country: 'Ghana',
+    phonePrefix: '+233',
+    phonePlaceholder: '24 XXX XXXX',
+  },
+  NG: {
+    primary: '#008751',
+    primaryLight: '#E8F5EE',
+    primaryMid: '#66B894',
+    primaryDark: '#006B41',
+    accent: '#FFFFFF',
+    textOnPrimary: '#FFFFFF',
+    flag: '🇳🇬',
+    country: 'Nigeria',
+    phonePrefix: '+234',
+    phonePlaceholder: '803 XXX XXXX',
+  },
+};
+
+type CountryCode = 'GH' | 'NG';
 
 export function LoginPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isLoading, setIsLoading] = useState(false);
-  const { requestOTP, login } = useAuthStore();
+  const [country, setCountry] = useState<CountryCode>('GH');
+  const [countdown, setCountdown] = useState(0);
+  const { requestOTP, login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const theme = themes[country];
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Countdown timer for resend OTP
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const handleRequestOTP = async () => {
-    if (!phone || phone.length < 10) {
+    if (!phone || phone.length < 9) {
       toast.error('Please enter a valid phone number');
       return;
     }
     
     setIsLoading(true);
     try {
-      await requestOTP(phone);
+      const fullPhone = `${theme.phonePrefix}${phone.replace(/\s/g, '')}`;
+      await requestOTP(fullPhone);
       setStep('otp');
+      setCountdown(60);
       toast.success('OTP sent to your phone');
     } catch (error: any) {
       toast.error(error.message || 'Failed to send OTP');
@@ -39,7 +88,8 @@ export function LoginPage() {
     
     setIsLoading(true);
     try {
-      await login(phone, otp);
+      const fullPhone = `${theme.phonePrefix}${phone.replace(/\s/g, '')}`;
+      await login(fullPhone, otp);
       toast.success('Welcome back!');
       navigate('/');
     } catch (error: any) {
@@ -49,106 +99,249 @@ export function LoginPage() {
     }
   };
 
+  const handleResendOTP = async () => {
+    if (countdown > 0) return;
+    setIsLoading(true);
+    try {
+      const fullPhone = `${theme.phonePrefix}${phone.replace(/\s/g, '')}`;
+      await requestOTP(fullPhone);
+      setCountdown(60);
+      toast.success('New OTP sent');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to resend OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatPhoneInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-primary/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-2xl mb-4">
-            <svg
-              className="w-12 h-12 text-primary-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Delivery App</h1>
-          <p className="text-muted-foreground">WarehousePOS Rider Portal</p>
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: theme.primaryLight }}
+    >
+      {/* Header Section */}
+      <div 
+        className="pt-12 pb-16 px-6 relative overflow-hidden"
+        style={{ backgroundColor: theme.primary }}
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-4 left-4 w-24 h-24 rounded-full border-4" style={{ borderColor: theme.accent }} />
+          <div className="absolute top-20 right-8 w-16 h-16 rounded-full border-4" style={{ borderColor: theme.accent }} />
+          <div className="absolute bottom-4 left-1/3 w-12 h-12 rounded-full border-4" style={{ borderColor: theme.accent }} />
         </div>
 
-        {/* Form */}
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
+        {/* Country Selector */}
+        <div className="flex justify-end mb-6 relative z-10">
+          <div className="flex bg-white/20 backdrop-blur-sm rounded-full p-1">
+            {(['GH', 'NG'] as CountryCode[]).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCountry(c)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  country === c
+                    ? 'bg-white shadow-lg'
+                    : 'hover:bg-white/30'
+                }`}
+                style={{ color: country === c ? theme.primary : theme.textOnPrimary }}
+              >
+                {themes[c].flag} {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Logo & Title */}
+        <div className="text-center relative z-10">
+          <div 
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 shadow-xl"
+            style={{ backgroundColor: theme.accent }}
+          >
+            <Truck className="w-10 h-10" style={{ color: theme.primary }} />
+          </div>
+          <h1 
+            className="text-3xl font-bold mb-2"
+            style={{ color: theme.textOnPrimary }}
+          >
+            Rider Portal
+          </h1>
+          <p 
+            className="text-sm opacity-80"
+            style={{ color: theme.textOnPrimary }}
+          >
+            WarehousePOS Delivery System
+          </p>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <div className="flex-1 px-6 -mt-8">
+        <div className="bg-white rounded-3xl shadow-xl p-6 max-w-md mx-auto">
           {step === 'phone' ? (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-foreground text-center">
-                Sign in with your phone
-              </h2>
-              
-              <Input
-                type="tel"
-                placeholder="Enter phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                leftIcon={<Phone className="w-5 h-5" />}
-              />
-              
-              <Button
-                className="w-full h-12"
+            <div className="space-y-5">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-zinc-900">Sign In</h2>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Enter your phone number to continue
+                </p>
+              </div>
+
+              {/* Phone Input */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Phone Number
+                </label>
+                <div className="flex items-center border-2 rounded-xl overflow-hidden focus-within:border-opacity-100 transition-colors"
+                  style={{ borderColor: `${theme.primary}50` }}
+                >
+                  <div 
+                    className="px-4 py-3.5 font-medium border-r"
+                    style={{ backgroundColor: theme.primaryLight, borderColor: `${theme.primary}30` }}
+                  >
+                    <span className="text-zinc-700">{theme.phonePrefix}</span>
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder={theme.phonePlaceholder}
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+                    className="flex-1 px-4 py-3.5 text-lg outline-none"
+                    maxLength={12}
+                  />
+                </div>
+              </div>
+
+              {/* Continue Button */}
+              <button
                 onClick={handleRequestOTP}
-                disabled={isLoading}
+                disabled={isLoading || phone.length < 9}
+                className="w-full py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ 
+                  backgroundColor: theme.primary, 
+                  color: theme.textOnPrimary,
+                }}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Sending...
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending OTP...
                   </>
                 ) : (
-                  'Get OTP'
+                  <>
+                    Continue
+                    <ChevronRight className="w-5 h-5" />
+                  </>
                 )}
-              </Button>
+              </button>
+
+              {/* Features */}
+              <div className="pt-4 space-y-3">
+                <div className="flex items-center gap-3 text-sm text-zinc-600">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: theme.primaryLight }}
+                  >
+                    <Shield className="w-4 h-4" style={{ color: theme.primaryDark }} />
+                  </div>
+                  <span>Secure OTP verification</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-zinc-600">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: theme.primaryLight }}
+                  >
+                    <Truck className="w-4 h-4" style={{ color: theme.primaryDark }} />
+                  </div>
+                  <span>Manage your deliveries on the go</span>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-foreground text-center">
-                Enter OTP
-              </h2>
-              <p className="text-sm text-muted-foreground text-center">
-                We sent a code to {phone}
-              </p>
-              
-              <Input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                maxLength={6}
-                className="text-center text-2xl tracking-widest"
-              />
-              
-              <Button
-                className="w-full h-12"
+            <div className="space-y-5">
+              {/* Back Button */}
+              <button
+                onClick={() => setStep('phone')}
+                className="flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Change number
+              </button>
+
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-zinc-900">Enter OTP</h2>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Code sent to {theme.phonePrefix} {phone}
+                </p>
+              </div>
+
+              {/* OTP Input */}
+              <div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Enter 6-digit code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full px-4 py-4 text-2xl text-center tracking-[0.5em] font-mono border-2 rounded-xl outline-none focus:border-opacity-100 transition-colors"
+                  style={{ borderColor: `${theme.primary}50` }}
+                  maxLength={6}
+                  autoFocus
+                />
+              </div>
+
+              {/* Verify Button */}
+              <button
                 onClick={handleLogin}
-                disabled={isLoading}
+                disabled={isLoading || otp.length < 4}
+                className="w-full py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ 
+                  backgroundColor: theme.primary, 
+                  color: theme.textOnPrimary,
+                }}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Verifying...
                   </>
                 ) : (
                   'Verify & Login'
                 )}
-              </Button>
-              
-              <button
-                onClick={() => setStep('phone')}
-                className="w-full text-sm text-primary hover:underline"
-              >
-                Change phone number
               </button>
+
+              {/* Resend OTP */}
+              <div className="text-center">
+                {countdown > 0 ? (
+                  <p className="text-sm text-zinc-500">
+                    Resend code in <span className="font-semibold" style={{ color: theme.primary }}>{countdown}s</span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleResendOTP}
+                    disabled={isLoading}
+                    className="text-sm font-medium hover:underline"
+                    style={{ color: theme.primary }}
+                  >
+                    Didn't receive code? Resend
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
-        
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Contact your store admin if you need help
+      </div>
+
+      {/* Footer */}
+      <div className="p-6 text-center">
+        <p className="text-xs text-zinc-500">
+          © 2026 WarehousePOS • Rider App v1.0
         </p>
       </div>
     </div>

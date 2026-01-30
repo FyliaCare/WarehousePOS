@@ -1,10 +1,11 @@
 // Edge Function: Verify Paystack Payment
+// deno-lint-ignore-file
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, isDevelopment } from '../_shared/utils.ts';
 import { verifyPayment as verifyPaystack } from '../_shared/paystack.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

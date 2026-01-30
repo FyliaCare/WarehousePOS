@@ -1,17 +1,41 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Package, MapPin, ChevronRight, Search } from 'lucide-react';
-import { Card, Badge, Input, EmptyState, Skeleton } from '@warehousepos/ui';
-import { formatCurrency, cn } from '@warehousepos/utils';
+import { Package, MapPin, ChevronRight, Search, CheckCircle, Navigation, AlertCircle } from 'lucide-react';
+import { formatCurrency, timeAgo } from '@warehousepos/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
-import type { DeliveryStatus, CountryCode } from '@warehousepos/types';
+import type { CountryCode } from '@warehousepos/types';
+
+// Premium theme configuration
+const themes = {
+  GH: {
+    primary: '#FFD000',
+    primaryLight: '#FFF8E0',
+    primaryMid: '#FFE566',
+    primaryDark: '#D4A900',
+    accent: '#1A1A1A',
+    textOnPrimary: '#1A1400',
+    flag: '🇬🇭',
+  },
+  NG: {
+    primary: '#008751',
+    primaryLight: '#E8F5EE',
+    primaryMid: '#66B894',
+    primaryDark: '#006B41',
+    accent: '#FFFFFF',
+    textOnPrimary: '#FFFFFF',
+    flag: '🇳🇬',
+  },
+};
+
+type DeliveryStatus = 'all' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed';
 
 export function DeliveriesPage() {
   const { rider, store } = useAuthStore();
   const country: CountryCode = (store as any)?.tenant?.country === 'NG' ? 'NG' : 'GH';
-  const [statusFilter, setStatusFilter] = useState<DeliveryStatus | 'all'>('all');
+  const theme = themes[country];
+  const [statusFilter, setStatusFilter] = useState<DeliveryStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: deliveries, isLoading } = useQuery({
@@ -45,113 +69,190 @@ export function DeliveriesPage() {
     );
   });
 
-  const statusTabs: { value: DeliveryStatus | 'all'; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'assigned', label: 'New' },
-    { value: 'picked_up', label: 'Picked' },
-    { value: 'in_transit', label: 'In Transit' },
-    { value: 'delivered', label: 'Delivered' },
+  const statusTabs: { value: DeliveryStatus; label: string; icon: any }[] = [
+    { value: 'all', label: 'All', icon: Package },
+    { value: 'assigned', label: 'New', icon: AlertCircle },
+    { value: 'picked_up', label: 'Picked', icon: Package },
+    { value: 'in_transit', label: 'Transit', icon: Navigation },
+    { value: 'delivered', label: 'Done', icon: CheckCircle },
   ];
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'assigned': return 'warning';
-      case 'picked_up': return 'info';
-      case 'in_transit': return 'default';
-      case 'delivered': return 'success';
-      case 'cancelled': return 'destructive';
-      default: return 'secondary';
+      case 'assigned': 
+        return { label: 'New', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' };
+      case 'picked_up': 
+        return { label: 'Picked Up', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' };
+      case 'in_transit': 
+        return { label: 'In Transit', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' };
+      case 'delivered': 
+        return { label: 'Delivered', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' };
+      case 'failed': 
+        return { label: 'Failed', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' };
+      case 'cancelled': 
+        return { label: 'Cancelled', color: 'bg-zinc-100 text-zinc-700', dot: 'bg-zinc-500' };
+      default: 
+        return { label: status, color: 'bg-zinc-100 text-zinc-700', dot: 'bg-zinc-500' };
     }
   };
 
+  // Count by status
+  const counts = {
+    all: deliveries?.length || 0,
+    assigned: deliveries?.filter((d: any) => d.status === 'assigned').length || 0,
+    picked_up: deliveries?.filter((d: any) => d.status === 'picked_up').length || 0,
+    in_transit: deliveries?.filter((d: any) => d.status === 'in_transit').length || 0,
+    delivered: deliveries?.filter((d: any) => d.status === 'delivered').length || 0,
+    failed: deliveries?.filter((d: any) => d.status === 'failed').length || 0,
+  };
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="min-h-screen pb-24" style={{ backgroundColor: theme.primaryLight }}>
       {/* Header */}
-      <h1 className="text-2xl font-bold text-foreground">Deliveries</h1>
+      <div 
+        className="px-5 pt-6 pb-4"
+        style={{ backgroundColor: theme.primary }}
+      >
+        <h1 
+          className="text-2xl font-bold mb-4"
+          style={{ color: theme.textOnPrimary }}
+        >
+          Deliveries
+        </h1>
 
-      {/* Search */}
-      <Input
-        placeholder="Search by order # or customer..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        leftIcon={<Search className="w-5 h-5" />}
-      />
-
-      {/* Status Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setStatusFilter(tab.value)}
-            className={cn(
-              'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
-              statusFilter === tab.value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search by order # or customer..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl bg-white shadow-sm text-sm outline-none"
+          />
+        </div>
       </div>
 
-      {/* Deliveries List */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-4">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-3 w-40 mb-1" />
-              <Skeleton className="h-3 w-32" />
-            </Card>
-          ))}
+      {/* Status Tabs */}
+      <div className="px-5 py-3 -mt-2">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {statusTabs.map((tab) => {
+            const isActive = statusFilter === tab.value;
+            const count = counts[tab.value];
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setStatusFilter(tab.value)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'shadow-sm'
+                    : 'bg-white/60 text-zinc-600 hover:bg-white'
+                }`}
+                style={isActive ? { 
+                  backgroundColor: theme.primary, 
+                  color: theme.textOnPrimary 
+                } : {}}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {count > 0 && (
+                  <span 
+                    className={`px-1.5 py-0.5 rounded-full text-xs ${
+                      isActive ? 'bg-white/30' : 'bg-zinc-200'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-      ) : filteredDeliveries && filteredDeliveries.length > 0 ? (
-        <div className="space-y-3">
-          {filteredDeliveries.map((delivery: any) => (
-            <Link key={delivery.id} to={`/deliveries/${delivery.id}`}>
-              <Card className="p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Package className="w-5 h-5 text-primary" />
+      </div>
+
+      {/* Content */}
+      <div className="px-5 space-y-3">
+        {isLoading ? (
+          // Skeleton Loading
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-zinc-200 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-zinc-200 rounded w-24" />
+                    <div className="h-3 bg-zinc-100 rounded w-40" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium text-foreground">
-                        Order #{delivery.order?.order_number?.slice(-6)}
-                      </p>
-                      <Badge variant={getStatusColor(delivery.status)}>
-                        {delivery.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span className="truncate">
-                        {delivery.order?.customer?.address || 'No address'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm text-muted-foreground">
-                        {delivery.order?.customer?.name}
-                      </p>
-                      <p className="font-medium text-foreground">
-                        {formatCurrency(delivery.order?.total || 0, country)}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="No deliveries found"
-          description={statusFilter === 'all' ? "You don't have any deliveries yet" : `No ${statusFilter} deliveries`}
-          icon={<Package className="w-12 h-12" />}
-        />
-      )}
+              </div>
+            ))}
+          </div>
+        ) : filteredDeliveries && filteredDeliveries.length > 0 ? (
+          filteredDeliveries.map((delivery: any) => {
+            const statusConfig = getStatusConfig(delivery.status);
+            return (
+              <Link 
+                key={delivery.id} 
+                to={`/deliveries/${delivery.id}`}
+                className="block"
+              >
+                <div className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start gap-4">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: theme.primaryLight }}
+                    >
+                      <Package className="w-6 h-6" style={{ color: theme.primaryDark }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-zinc-900">
+                          #{delivery.order?.order_number?.slice(-6)}
+                        </p>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
+                          {statusConfig.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-zinc-500 mb-1">
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {delivery.order?.customer?.address || 'No address'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-zinc-400">
+                          {delivery.order?.customer?.name} • {timeAgo(delivery.created_at)}
+                        </p>
+                        <p className="font-semibold" style={{ color: theme.primaryDark }}>
+                          {formatCurrency(delivery.order?.total || 0, country)}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-4" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })
+        ) : (
+          <div className="bg-white rounded-2xl p-8 text-center">
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: theme.primaryLight }}
+            >
+              <Package className="w-8 h-8" style={{ color: theme.primaryDark }} />
+            </div>
+            <p className="font-medium text-zinc-900 mb-1">No deliveries found</p>
+            <p className="text-sm text-zinc-500">
+              {statusFilter === 'all' 
+                ? "You don't have any deliveries yet" 
+                : `No ${statusFilter.replace('_', ' ')} deliveries`
+              }
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

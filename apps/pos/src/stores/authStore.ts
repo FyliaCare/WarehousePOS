@@ -10,6 +10,55 @@ interface UserProfile extends User {
   store: Store;
 }
 
+// DEV BYPASS - Master account for development
+// Uses fixed UUIDs that match database dev records
+const DEV_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const DEV_STORE_ID = '00000000-0000-0000-0000-000000000002';
+const DEV_USER_ID = '00000000-0000-0000-0000-000000000003';
+
+const DEV_MASTER_ACCOUNT = {
+  user: {
+    id: DEV_USER_ID,
+    tenant_id: DEV_TENANT_ID,
+    store_id: DEV_STORE_ID,
+    phone: '+233000000000',
+    full_name: 'Dev Admin',
+    email: 'dev@warehousepos.app',
+    role: 'owner' as const,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } as User,
+  tenant: {
+    id: DEV_TENANT_ID,
+    name: 'Dev Business',
+    slug: 'dev-business',
+    country: 'GH' as const,
+    currency: 'GHS' as const,
+    subscription_status: 'trial' as const,
+    trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } as Tenant,
+  store: {
+    id: DEV_STORE_ID,
+    tenant_id: DEV_TENANT_ID,
+    name: 'Dev Store',
+    city: 'Accra',
+    country: 'GH',
+    currency: 'GHS',
+    is_active: true,
+    is_main: true,
+    operating_hours: {},
+    deleted_at: null,
+    settings: {
+      location: { lat: 5.6037, lng: -0.1870 }
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } as Store,
+};
+
 interface AuthState {
   // State
   user: User | null;
@@ -29,6 +78,9 @@ interface AuthState {
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  
+  // DEV BYPASS
+  devLogin: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -53,6 +105,19 @@ export const useAuthStore = create<AuthState>()(
           tenant: null,
           store: null,
           isAuthenticated: false,
+        });
+      },
+      
+      // DEV BYPASS - Quick login for development
+      devLogin: () => {
+        console.log('🔧 DEV LOGIN ACTIVATED');
+        set({
+          user: DEV_MASTER_ACCOUNT.user,
+          tenant: DEV_MASTER_ACCOUNT.tenant,
+          store: DEV_MASTER_ACCOUNT.store,
+          isAuthenticated: true,
+          isLoading: false,
+          isInitialized: true,
         });
       },
       

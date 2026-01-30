@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, ArrowLeft, Sparkles, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Phone, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowLeft, Sparkles, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Phone, RefreshCw, Code } from 'lucide-react';
 import { sendOTP, verifyOTP } from '@/lib/supabase-auth';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ type Mode = 'phone' | 'verify-otp';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { user, isInitialized, refreshUser } = useAuthStore();
+  const { user, isInitialized, refreshUser, devLogin } = useAuthStore();
   
   const [mode, setMode] = useState<Mode>('phone');
   const [isLoading, setIsLoading] = useState(false);
@@ -266,6 +266,7 @@ export function LoginPage() {
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                       onKeyPress={handleKeyPress}
                       placeholder={isGhana ? '24 123 4567' : '803 123 4567'}
+                      autoComplete="tel-national"
                       className="w-full pl-28 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                     />
                   </div>
@@ -291,6 +292,7 @@ export function LoginPage() {
                     placeholder="000000"
                     maxLength={6}
                     autoFocus
+                    autoComplete="one-time-code"
                     className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 text-xl text-center tracking-[0.75em] placeholder-gray-300"
                   />
                   
@@ -374,6 +376,22 @@ export function LoginPage() {
                     </div>
                   ))}
                 </div>
+                
+                {/* DEV BYPASS - Remove in production */}
+                {import.meta.env.DEV && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      devLogin();
+                      toast.success('🔧 Dev mode activated!');
+                      navigate('/dashboard');
+                    }}
+                    className="mt-4 w-full flex items-center justify-center gap-2 py-2 px-4 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition-colors border border-amber-300"
+                  >
+                    <Code className="w-4 h-4" />
+                    Dev Login (Skip Auth)
+                  </button>
+                )}
               </div>
             )}
           </div>

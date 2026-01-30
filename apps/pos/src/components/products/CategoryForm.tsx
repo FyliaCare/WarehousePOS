@@ -1,11 +1,10 @@
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
-import { Button, Input, Switch } from '@warehousepos/ui';
+import { Loader2, Layers, Palette, Smile, ToggleLeft, Eye } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import type { Category } from '@warehousepos/types';
+import type { Category, CountryCode } from '@warehousepos/types';
 
 interface CategoryFormProps {
   category?: Category | null;
@@ -19,6 +18,28 @@ interface CategoryFormData {
   icon: string;
   isActive: boolean;
 }
+
+// Theme configuration
+const themes = {
+  GH: {
+    primary: '#FFD000',
+    primaryLight: '#FFF8E0',
+    primaryMid: '#FFE566',
+    primaryDark: '#D4A900',
+    accent: '#1A1A1A',
+    textOnPrimary: '#1A1A1A',
+    textOnLight: '#1A1A1A',
+  },
+  NG: {
+    primary: '#008751',
+    primaryLight: '#E6F5EE',
+    primaryMid: '#66B894',
+    primaryDark: '#006B40',
+    accent: '#1A1A1A',
+    textOnPrimary: '#FFFFFF',
+    textOnLight: '#1A1A1A',
+  },
+};
 
 const CATEGORY_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -34,9 +55,11 @@ const CATEGORY_ICONS = [
 ];
 
 export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
-  const { store } = useAuthStore();
+  const { tenant, store } = useAuthStore();
   const queryClient = useQueryClient();
   const isEditing = !!category;
+  const country: CountryCode = tenant?.country === 'NG' ? 'NG' : 'GH';
+  const theme = themes[country];
 
   const {
     register,
@@ -65,6 +88,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
   const selectedColor = watch('color');
   const selectedIcon = watch('icon');
   const isActive = watch('isActive');
+  const watchedName = watch('name');
 
   const mutation = useMutation({
     mutationFn: async (data: CategoryFormData) => {
@@ -81,7 +105,6 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           .eq('id', category.id);
         if (error) throw error;
       } else {
-        // Get max sort order
         const { data: existing } = await supabase
           .from('categories')
           .select('sort_order')
@@ -118,36 +141,53 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Input
-        label="Category Name"
-        placeholder="e.g., Beverages"
-        error={errors.name?.message}
-        {...register('name', { required: 'Name is required' })}
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* Category Name */}
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>
+          <Layers className="w-4 h-4" style={{ color: theme.accent }} />
+          Category Name
+        </label>
+        <input
+          type="text"
+          placeholder="e.g., Beverages"
+          className="w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all"
+          style={{ borderColor: theme.primaryMid }}
+          {...register('name', { required: 'Name is required' })}
+        />
+        {errors.name && <p className="text-xs text-red-500 mt-2">{errors.name.message}</p>}
+        
+        <label className="block text-xs text-zinc-500 mt-4 mb-1">Description (optional)</label>
+        <textarea
+          placeholder="Brief description of this category..."
+          rows={2}
+          className="w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all resize-none"
+          style={{ borderColor: theme.primaryMid }}
+          {...register('description')}
+        />
+      </div>
 
-      <Input
-        label="Description (optional)"
-        placeholder="Brief description..."
-        error={errors.description?.message}
-        {...register('description')}
-      />
-
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+      {/* Icon Selection */}
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>
+          <Smile className="w-4 h-4" style={{ color: theme.accent }} />
           Icon
         </label>
-        <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg max-h-32 overflow-y-auto">
+        <div className="grid grid-cols-10 gap-2 p-3 rounded-lg max-h-32 overflow-y-auto" style={{ backgroundColor: theme.primaryLight }}>
           {CATEGORY_ICONS.map((icon) => (
             <button
               key={icon}
               type="button"
               onClick={() => setValue('icon', icon)}
-              className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
                 selectedIcon === icon
-                  ? 'bg-primary ring-2 ring-primary ring-offset-2'
-                  : 'bg-background hover:bg-muted-foreground/10'
+                  ? 'ring-2 ring-offset-1'
+                  : 'bg-white hover:scale-110'
               }`}
+              style={selectedIcon === icon ? { 
+                backgroundColor: theme.primary, 
+                '--tw-ring-color': theme.accent 
+              } as React.CSSProperties : {}}
             >
               {icon}
             </button>
@@ -155,67 +195,101 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+      {/* Color Selection */}
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>
+          <Palette className="w-4 h-4" style={{ color: theme.accent }} />
           Color
         </label>
-        <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg">
+        <div className="flex flex-wrap gap-2 p-3 rounded-lg" style={{ backgroundColor: theme.primaryLight }}>
           {CATEGORY_COLORS.map((color) => (
             <button
               key={color}
               type="button"
               onClick={() => setValue('color', color)}
-              className={`w-8 h-8 rounded-full transition-all ${
-                selectedColor === color ? 'ring-2 ring-offset-2 ring-primary' : ''
+              className={`w-8 h-8 rounded-full transition-all hover:scale-110 ${
+                selectedColor === color ? 'ring-2 ring-offset-2' : ''
               }`}
-              style={{ backgroundColor: color }}
+              style={{ 
+                backgroundColor: color,
+                '--tw-ring-color': theme.accent,
+              } as React.CSSProperties}
             />
           ))}
         </div>
       </div>
 
       {/* Preview */}
-      <div className="p-4 bg-muted rounded-lg">
-        <p className="text-sm text-muted-foreground mb-2">Preview</p>
-        <div className="flex items-center gap-3">
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>
+          <Eye className="w-4 h-4" style={{ color: theme.accent }} />
+          Preview
+        </label>
+        <div className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: theme.primaryLight }}>
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center text-xl"
+            className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl shrink-0"
             style={{ backgroundColor: selectedColor }}
           >
             {selectedIcon}
           </div>
-          <span className="font-medium text-foreground">
-            {watch('name') || 'Category Name'}
-          </span>
+          <div>
+            <p className="font-semibold text-zinc-900">
+              {watchedName || 'Category Name'}
+            </p>
+            <p className="text-sm text-zinc-500">0 products</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-        <div>
-          <p className="font-medium text-foreground">Active</p>
-          <p className="text-sm text-muted-foreground">
-            Category is visible in the POS
-          </p>
+      {/* Active Toggle */}
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>
+          <ToggleLeft className="w-4 h-4" style={{ color: theme.accent }} />
+          Status
+        </label>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-zinc-900">Active Category</p>
+            <p className="text-xs text-zinc-500">Category will be visible in the POS</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setValue('isActive', !isActive)}
+            className={`relative w-12 h-7 rounded-full transition-colors ${
+              isActive ? '' : 'bg-zinc-300'
+            }`}
+            style={isActive ? { backgroundColor: theme.primary } : {}}
+          >
+            <span
+              className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                isActive ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
-        <Switch
-          checked={isActive}
-          onCheckedChange={(checked) => setValue('isActive', checked)}
-        />
       </div>
 
-      <div className="flex gap-3 pt-4">
-        <Button
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-2">
+        <button
           type="button"
-          variant="outline"
-          className="flex-1"
           onClick={onSuccess}
+          className="flex-1 px-4 py-3 rounded-lg font-medium text-sm border border-zinc-300 text-zinc-700 hover:bg-zinc-50 transition-colors"
         >
           Cancel
-        </Button>
-        <Button type="submit" className="flex-1" disabled={mutation.isPending}>
+        </button>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all disabled:opacity-50"
+          style={{ 
+            backgroundColor: theme.primary, 
+            color: theme.textOnPrimary 
+          }}
+        >
           {mutation.isPending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               Saving...
             </>
           ) : isEditing ? (
@@ -223,7 +297,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           ) : (
             'Add Category'
           )}
-        </Button>
+        </button>
       </div>
     </form>
   );
