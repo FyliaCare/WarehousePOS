@@ -108,6 +108,9 @@ export async function sendOTP(
     return { success: false, error: validation.error };
   }
   
+  // Clean the phone but DON'T format it - Edge Function handles formatting
+  const cleanPhone = phone.replace(/\s+/g, '').trim();
+  
   try {
     // Production timeout - SMS delivery can take up to 20 seconds
     const timeoutMs = 30000;
@@ -116,7 +119,7 @@ export async function sendOTP(
     );
 
     const invokePromise = supabase.functions.invoke('phone-otp-send', {
-      body: { phone, country, purpose },
+      body: { phone: cleanPhone, country, purpose },
     });
 
     const { data, error } = await Promise.race([invokePromise, timeout]);
@@ -156,6 +159,9 @@ export async function verifyOTP(
     return { success: false, error: 'Please enter a valid 6-digit code' };
   }
   
+  // Clean the phone but DON'T format - Edge Function handles formatting
+  const cleanPhone = phone.replace(/\s+/g, '').trim();
+  
   try {
     console.log('Invoking phone-otp-verify...');
     
@@ -166,7 +172,7 @@ export async function verifyOTP(
     );
 
     const invokePromise = supabase.functions.invoke('phone-otp-verify', {
-      body: { phone, country, otp, purpose },
+      body: { phone: cleanPhone, country, otp, purpose },
     });
 
     const { data, error } = await Promise.race([invokePromise, timeout]);
@@ -202,18 +208,23 @@ export async function verifyOTP(
     }
     
     // If we got a session, set it in Supabase client
-    // Use fire-and-forget to prevent blocking on auth state listeners
+    // MUST AWAIT to ensure session is set before we return success
     if (data.session) {
       console.log('Setting session...');
-      supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      }).then(() => {
+      try {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (sessionError) {
+          console.error('Failed to set session:', sessionError);
+          return { success: false, error: 'Failed to establish session' };
+        }
         console.log('Session set successfully');
-      }).catch((sessionError) => {
-        console.error('Failed to set session:', sessionError);
-      });
-      // Don't await - let it complete in background
+      } catch (sessionError) {
+        console.error('Exception setting session:', sessionError);
+        return { success: false, error: 'Failed to establish session' };
+      }
     }
     
     console.log('Returning success from verifyOTP');
