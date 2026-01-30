@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Loader2, Mail, Lock, Eye, EyeOff, User, Building2, Sparkles, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { signUpWithEmail, setupBusinessProfile } from '@/lib/email-auth';
+import { signUpWithEmail, setupBusinessProfile } from '@/lib/email-auth-simple';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import type { CountryCode } from '@warehousepos/types';
@@ -75,14 +75,7 @@ export function RegisterPage() {
       const result = await signUpWithEmail(email, password, fullName);
       
       if (result.success) {
-        setUserId(result.user?.id || null);
-        
-        if (result.needsEmailVerification) {
-          toast.success('Account created! Please check your email to verify.');
-          // For now, proceed to business setup anyway
-          // Email verification can be enforced later
-        }
-        
+        setUserId(result.userId || null);
         setStep('business');
         toast.success('Account created! Now set up your business.');
       } else {

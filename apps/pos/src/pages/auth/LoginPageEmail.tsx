@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Loader2, Mail, Lock, Eye, EyeOff, Sparkles, TrendingUp, Users, ShoppingBag, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { signInWithEmail, sendPasswordReset } from '@/lib/email-auth';
+import { signInWithEmail, sendPasswordReset } from '@/lib/email-auth-simple';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 
