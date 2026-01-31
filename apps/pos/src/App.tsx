@@ -21,11 +21,26 @@ import { SettingsPage } from '@/pages/settings/SettingsPage';
 import DeliveriesPage from '@/pages/DeliveriesPage';
 import RidersPage from '@/pages/RidersPage';
 import ReportsPage from '@/pages/ReportsPage';
+const AdaptiveReportsPage = lazy(() => import('@/pages/reports/AdaptiveReportsPage'));
 
 // Lazy load POS pages for better code splitting
 const POSPage = lazy(() => import('@/pages/POSPage').then(m => ({ default: m.POSPage })));
 const MobilePOSPage = lazy(() => import('@/pages/pos/MobilePOSPage'));
 const AdaptivePOSPage = lazy(() => import('@/pages/pos/AdaptivePOSPage'));
+const MobileProductsPage = lazy(() => import('@/pages/products/MobileProductsPage'));
+const AdaptiveProductsPage = lazy(() => import('@/pages/products/AdaptiveProductsPage'));
+const MobileCategoriesPage = lazy(() => import('@/pages/products/MobileCategoriesPage'));
+const AdaptiveCategoriesPage = lazy(() => import('@/pages/products/AdaptiveCategoriesPage'));
+const MobileStockPage = lazy(() => import('@/pages/inventory/MobileStockPage'));
+const AdaptiveStockPage = lazy(() => import('@/pages/inventory/AdaptiveStockPage'));
+const MobileCustomersPage = lazy(() => import('@/pages/customers/MobileCustomersPage'));
+const AdaptiveCustomersPage = lazy(() => import('@/pages/customers/AdaptiveCustomersPage'));
+const MobileSalesPage = lazy(() => import('@/pages/sales/MobileSalesPage'));
+const AdaptiveSalesPage = lazy(() => import('@/pages/sales/AdaptiveSalesPage'));
+const AdaptiveDeliveriesPage = lazy(() => import('@/pages/delivery/AdaptiveDeliveriesPage'));
+const AdaptiveRidersPage = lazy(() => import('@/pages/riders/AdaptiveRidersPage'));
+const AdaptiveAdvancedSettingsPage = lazy(() => import('@/pages/settings/AdaptiveAdvancedSettingsPage'));
+const AdaptiveSettingsPage = lazy(() => import('@/pages/settings/AdaptiveSettingsPage'));
 
 // Delivery Management
 import DeliveryZonesPage from '@/pages/delivery/DeliveryZonesPage';
@@ -121,6 +136,78 @@ function App() {
           }
         />
 
+        {/* Mobile Products - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-products"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <MobileProductsPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mobile Categories - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-categories"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <MobileCategoriesPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mobile Stock - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-stock"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <MobileStockPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mobile Customers - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-customers"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <MobileCustomersPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mobile Sales - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-sales"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <MobileSalesPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mobile Deliveries - Full screen without sidebar for PWA mode */}
+        <Route
+          path="/mobile-deliveries"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoading />}>
+                <AdaptiveDeliveriesPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Public Tracking Page - No auth required */}
         <Route path="/track/:trackingCode" element={<TrackingPage />} />
         <Route path="/track" element={<TrackingPage />} />
@@ -136,17 +223,27 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/pos" element={<Suspense fallback={<PageLoading />}><AdaptivePOSPage /></Suspense>} />
           <Route path="/pos/desktop" element={<Suspense fallback={<PageLoading />}><POSPage /></Suspense>} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/categories" element={<CategoriesPage />} />
-          <Route path="/stock" element={<StockPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/deliveries" element={<DeliveriesPage />} />
+          <Route path="/products" element={<Suspense fallback={<PageLoading />}><AdaptiveProductsPage /></Suspense>} />
+          <Route path="/products/desktop" element={<ProductsPage />} />
+          <Route path="/categories" element={<Suspense fallback={<PageLoading />}><AdaptiveCategoriesPage /></Suspense>} />
+          <Route path="/categories/desktop" element={<CategoriesPage />} />
+          <Route path="/stock" element={<Suspense fallback={<PageLoading />}><AdaptiveStockPage /></Suspense>} />
+          <Route path="/stock/desktop" element={<StockPage />} />
+          <Route path="/customers" element={<Suspense fallback={<PageLoading />}><AdaptiveCustomersPage /></Suspense>} />
+          <Route path="/customers/desktop" element={<CustomersPage />} />
+          <Route path="/sales" element={<Suspense fallback={<PageLoading />}><AdaptiveSalesPage /></Suspense>} />
+          <Route path="/sales/desktop" element={<SalesPage />} />
+          <Route path="/deliveries" element={<Suspense fallback={<PageLoading />}><AdaptiveDeliveriesPage /></Suspense>} />
+          <Route path="/deliveries/desktop" element={<DeliveriesPage />} />
           <Route path="/deliveries/zones" element={<DeliveryZonesPage />} />
           <Route path="/deliveries/dispatch" element={<DeliveryAssignmentsPage />} />
-          <Route path="/riders" element={<RidersPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/riders" element={<Suspense fallback={<PageLoading />}><AdaptiveRidersPage /></Suspense>} />
+          <Route path="/riders/desktop" element={<RidersPage />} />
+          <Route path="/reports" element={<Suspense fallback={<PageLoading />}><AdaptiveReportsPage /></Suspense>} />
+          <Route path="/reports/desktop" element={<ReportsPage />} />
+          <Route path="/settings" element={<Suspense fallback={<PageLoading />}><AdaptiveSettingsPage /></Suspense>} />
+          <Route path="/settings/desktop" element={<SettingsPage />} />
+          <Route path="/settings/advanced" element={<Suspense fallback={<PageLoading />}><AdaptiveAdvancedSettingsPage /></Suspense>} />
         </Route>
 
         {/* Redirect root to dashboard or login */}

@@ -187,7 +187,7 @@ export function DeliveryZoneMap({
     }
 
     if (isDrawingMode || isEditing) {
-      // Create draw control
+      // Create draw control (hidden - we trigger drawing programmatically)
       const drawControl = new L.Control.Draw({
         position: 'topright',
         draw: {
@@ -219,6 +219,27 @@ export function DeliveryZoneMap({
 
       map.addControl(drawControl);
       drawControlRef.current = drawControl;
+
+      // Programmatically start polygon drawing when in drawing mode
+      if (isDrawingMode && !isEditing) {
+        // Small delay to ensure control is ready
+        setTimeout(() => {
+          const polygonHandler = new (L.Draw as any).Polygon(map, {
+            allowIntersection: false,
+            drawError: {
+              color: '#e74c3c',
+              message: '<strong>Error:</strong> Shape edges cannot cross!',
+            },
+            shapeOptions: {
+              color: theme.primary,
+              fillColor: theme.primary,
+              fillOpacity: 0.3,
+              weight: 3,
+            },
+          });
+          polygonHandler.enable();
+        }, 100);
+      }
 
       // Handle polygon creation
       const handleCreated = (e: L.LeafletEvent) => {
@@ -396,6 +417,19 @@ export function DeliveryZoneMap({
 
   return (
     <div className={`relative rounded-2xl overflow-hidden border border-zinc-200 ${className}`}>
+      {/* Custom styles for Leaflet draw - hide toolbar since we trigger programmatically */}
+      <style>{`
+        .leaflet-draw-toolbar {
+          display: none !important;
+        }
+        .leaflet-draw-section {
+          display: none !important;
+        }
+        .leaflet-draw.leaflet-control {
+          display: none !important;
+        }
+      `}</style>
+      
       {/* Map Container */}
       <div 
         ref={mapContainerRef} 
@@ -406,9 +440,9 @@ export function DeliveryZoneMap({
       {/* Custom Controls */}
       {showControls && (
         <>
-          {/* Top Left - Drawing Indicator */}
+          {/* Top Left - Drawing Indicator - hidden on mobile since parent shows instructions */}
           {(isDrawingMode || isEditing) && (
-            <div className="absolute top-4 left-4 z-[1000] bg-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-3">
+            <div className="absolute top-4 left-4 z-10 bg-white rounded-xl shadow-lg px-4 py-3 items-center gap-3 hidden md:flex">
               <div 
                 className="w-3 h-3 rounded-full animate-pulse"
                 style={{ backgroundColor: theme.primary }}
@@ -419,8 +453,8 @@ export function DeliveryZoneMap({
             </div>
           )}
 
-          {/* Right Side Controls - positioned below leaflet-draw toolbar */}
-          <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-2">
+          {/* Right Side Controls */}
+          <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
             {/* Zoom Controls */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <button
@@ -470,7 +504,7 @@ export function DeliveryZoneMap({
 
           {/* Bottom Left - Legend */}
           {zones.length > 0 && (
-            <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-xl shadow-lg p-3 max-w-[200px]">
+            <div className="absolute bottom-4 left-4 z-10 bg-white rounded-xl shadow-lg p-3 max-w-[200px]">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
                 Zones ({zones.length})
               </p>
@@ -504,7 +538,7 @@ export function DeliveryZoneMap({
 
           {/* Current Drawn Boundary Info */}
           {currentDrawnBoundary && isDrawingMode && (
-            <div className="absolute bottom-4 right-4 z-[1000] bg-white rounded-xl shadow-lg p-3">
+            <div className="absolute bottom-4 right-4 z-10 bg-white rounded-xl shadow-lg p-3">
               <div className="flex items-center gap-2 text-emerald-600">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full" />
                 <span className="text-sm font-medium">Boundary drawn</span>

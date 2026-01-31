@@ -76,17 +76,17 @@ export default function ReportsPage() {
     return startDate.toISOString();
   };
 
-  // Sales Report Query
+  // Sales Report Query - using 'sales' table
   const { data: salesReport } = useQuery({
     queryKey: ['sales-report', store?.id, dateRange],
     queryFn: async () => {
       if (!store?.id) return { totalSales: 0, orderCount: 0, avgOrderValue: 0, byPaymentMethod: {}, dailySales: [], prevTotal: 0 };
       const { data, error } = await supabase
-        .from('orders')
+        .from('sales')
         .select('total, payment_method, payment_status, created_at')
         .eq('store_id', store.id)
         .gte('created_at', getDateRange())
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
       if (error) throw error;
 
       const typedData = (data || []) as Array<{ total: number; payment_method: string; payment_status: string; created_at: string }>;
@@ -123,12 +123,12 @@ export default function ReportsPage() {
       const prevStartDate = new Date(previousPeriodStart.getTime() - periodLength);
       
       const { data: prevData } = await supabase
-        .from('orders')
+        .from('sales')
         .select('total')
         .eq('store_id', store!.id)
         .gte('created_at', prevStartDate.toISOString())
         .lt('created_at', getDateRange())
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
       
       const prevTotal = (prevData || []).reduce((sum, order: any) => sum + order.total, 0);
 
@@ -144,24 +144,31 @@ export default function ReportsPage() {
     enabled: !!store?.id,
   });
 
-  // Product Sales Report
+  // Product Sales Report - using 'sale_items' table
   const { data: productReport } = useQuery({
     queryKey: ['product-report', store?.id, dateRange],
     queryFn: async () => {
+      if (!store?.id) return [];
+      
+      // First get sales in date range
+      const { data: salesInRange } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('store_id', store.id)
+        .gte('created_at', getDateRange())
+        .eq('status', 'completed');
+      
+      if (!salesInRange || salesInRange.length === 0) return [];
+      
+      const saleIds = salesInRange.map(s => s.id);
+      
       const { data, error } = await supabase
-        .from('order_items')
-        .select(`
-          quantity,
-          total_price,
-          product:products(id, name, sku),
-          order:orders!inner(store_id, status, created_at)
-        `)
-        .eq('order.store_id', store!.id)
-        .gte('order.created_at', getDateRange())
-        .in('order.status', ['completed', 'delivered']);
+        .from('sale_items')
+        .select('quantity, total, product:products(id, name, sku)')
+        .in('sale_id', saleIds);
       if (error) throw error;
 
-      const productSales = data.reduce((acc: Record<string, { name: string; sku: string; quantity: number; revenue: number }>, item: any) => {
+      const productSales = (data || []).reduce((acc: Record<string, { name: string; sku: string; quantity: number; revenue: number }>, item: any) => {
         const id = item.product?.id || 'unknown';
         const name = item.product?.name || 'Unknown';
         const sku = item.product?.sku || '';
@@ -169,7 +176,7 @@ export default function ReportsPage() {
           acc[id] = { name, sku, quantity: 0, revenue: 0 };
         }
         acc[id].quantity += item.quantity;
-        acc[id].revenue += item.total_price;
+        acc[id].revenue += item.total;
         return acc;
       }, {});
 
@@ -179,27 +186,27 @@ export default function ReportsPage() {
     enabled: !!store?.id,
   });
 
-  // Customer Report
+  // Customer Report - using 'sales' table
   const { data: customerReport } = useQuery({
     queryKey: ['customer-report', store?.id, dateRange],
     queryFn: async () => {
       if (!store?.id) return [];
       const { data, error } = await supabase
-        .from('orders')
-        .select('customer_id, customer_name, total')
+        .from('sales')
+        .select('customer_id, total, customer:customers(name)')
         .eq('store_id', store.id)
         .gte('created_at', getDateRange())
-        .in('status', ['completed', 'delivered'])
+        .eq('status', 'completed')
         .not('customer_id', 'is', null);
       if (error) throw error;
 
-      const customerSales = data.reduce((acc: Record<string, { name: string; orders: number; spent: number }>, order: any) => {
-        const id = order.customer_id;
+      const customerSales = (data || []).reduce((acc: Record<string, { name: string; orders: number; spent: number }>, sale: any) => {
+        const id = sale.customer_id;
         if (!acc[id]) {
-          acc[id] = { name: order.customer_name || 'Unknown', orders: 0, spent: 0 };
+          acc[id] = { name: sale.customer?.name || 'Unknown', orders: 0, spent: 0 };
         }
         acc[id].orders += 1;
-        acc[id].spent += order.total;
+        acc[id].spent += sale.total;
         return acc;
       }, {});
 
@@ -210,26 +217,32 @@ export default function ReportsPage() {
     enabled: !!store?.id,
   });
 
-  // Inventory Report
+  // Inventory Report - using stock_levels and products
   const { data: inventoryReport } = useQuery({
     queryKey: ['inventory-report', store?.id],
     queryFn: async () => {
       if (!store?.id) return { totalProducts: 0, lowStock: [], outOfStock: [], totalValue: 0, categories: [] };
       
+      // Get products with their stock levels
       const { data: products, error } = await supabase
         .from('products')
-        .select('id, name, sku, quantity, price, reorder_level, category')
+        .select('id, name, sku, price, low_stock_threshold, category:categories(name), stock_levels(quantity)')
         .eq('store_id', store.id)
         .eq('is_active', true);
       if (error) throw error;
 
-      const typedProducts = products as Array<{ 
-        id: string; name: string; sku: string; quantity: number; 
-        price: number; reorder_level: number; category: string 
-      }>;
+      const typedProducts = (products || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        quantity: p.stock_levels?.[0]?.quantity || 0,
+        price: p.price,
+        reorder_level: p.low_stock_threshold || 10,
+        category: p.category?.name || 'Uncategorized'
+      }));
 
       const totalProducts = typedProducts.length;
-      const lowStock = typedProducts.filter(p => p.quantity > 0 && p.quantity <= (p.reorder_level || 10));
+      const lowStock = typedProducts.filter(p => p.quantity > 0 && p.quantity <= p.reorder_level);
       const outOfStock = typedProducts.filter(p => p.quantity <= 0);
       const totalValue = typedProducts.reduce((sum, p) => sum + (p.quantity * p.price), 0);
 

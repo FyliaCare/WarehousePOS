@@ -66,98 +66,101 @@ export function DashboardPage() {
       yesterday.setHours(0, 0, 0, 0);
       const yesterdayISO = yesterday.toISOString();
 
-      // Today's sales
-      const { data: todayOrders } = await supabase
-        .from('orders')
+      // Today's sales - using 'sales' table instead of 'orders'
+      const { data: todaySalesData } = await supabase
+        .from('sales')
         .select('total')
         .eq('store_id', store.id)
         .gte('created_at', todayISO)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
-      const todaySales = (todayOrders || []).reduce((sum, o: any) => sum + o.total, 0);
-      const todayOrderCount = (todayOrders || []).length;
+      const todaySales = (todaySalesData || []).reduce((sum, o: any) => sum + o.total, 0);
+      const todaySaleCount = (todaySalesData || []).length;
       
       // Yesterday's sales for comparison
-      const { data: yesterdayOrders } = await supabase
-        .from('orders')
+      const { data: yesterdaySalesData } = await supabase
+        .from('sales')
         .select('total')
         .eq('store_id', store.id)
         .gte('created_at', yesterdayISO)
         .lt('created_at', todayISO)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
-      const yesterdaySales = (yesterdayOrders || []).reduce((sum, o: any) => sum + o.total, 0);
-      const salesGrowth = yesterdaySales > 0 
-        ? ((todaySales - yesterdaySales) / yesterdaySales) * 100 
+      const yesterdaySalesTotal = (yesterdaySalesData || []).reduce((sum, o: any) => sum + o.total, 0);
+      const salesGrowth = yesterdaySalesTotal > 0 
+        ? ((todaySales - yesterdaySalesTotal) / yesterdaySalesTotal) * 100 
         : 0;
 
       // Week sales
-      const { data: weekOrders } = await supabase
-        .from('orders')
+      const { data: weekSalesData } = await supabase
+        .from('sales')
         .select('total')
         .eq('store_id', store.id)
         .gte('created_at', weekAgoISO)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
-      const weekSales = (weekOrders || []).reduce((sum, o: any) => sum + o.total, 0);
-      const weekOrderCount = (weekOrders || []).length;
+      const weekSales = (weekSalesData || []).reduce((sum, o: any) => sum + o.total, 0);
+      const weekSaleCount = (weekSalesData || []).length;
 
       // Month sales
-      const { data: monthOrders } = await supabase
-        .from('orders')
+      const { data: monthSalesData } = await supabase
+        .from('sales')
         .select('total')
         .eq('store_id', store.id)
         .gte('created_at', monthAgoISO)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
-      const monthSales = (monthOrders || []).reduce((sum, o: any) => sum + o.total, 0);
+      const monthSales = (monthSalesData || []).reduce((sum, o: any) => sum + o.total, 0);
 
-      // Active customers this month
-      const { data: activeCustomers } = await supabase
-        .from('orders')
+      // Active customers this month - from sales table
+      const { data: activeCustomersData } = await supabase
+        .from('sales')
         .select('customer_id')
         .eq('store_id', store.id)
         .gte('created_at', monthAgoISO)
         .not('customer_id', 'is', null)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
-      const uniqueCustomers = new Set((activeCustomers || []).map((o: any) => o.customer_id)).size;
+      const uniqueCustomers = new Set((activeCustomersData || []).map((o: any) => o.customer_id)).size;
 
       // Low stock products - query stock_levels table joined with products
       const { data: lowStockProducts } = await supabase
         .from('stock_levels')
-        .select('id, quantity, product:products!inner(id, is_active)')
-        .eq('store_id', store.id)
-        .eq('product.is_active', true)
-        .lt('quantity', 10);
+        .select('id, quantity, product:products!inner(id, is_active, low_stock_threshold)')
+        .eq('store_id', store.id);
+      
+      // Filter low stock in JS since we can't easily compare quantity < low_stock_threshold in Supabase
+      const lowStockCount = (lowStockProducts || []).filter((item: any) => 
+        item.product?.is_active && item.quantity < (item.product?.low_stock_threshold || 10)
+      ).length;
 
-      // Pending orders
-      const { data: pendingOrders } = await supabase
-        .from('orders')
+      // Pending sales
+      const { data: pendingSales } = await supabase
+        .from('sales')
         .select('id')
         .eq('store_id', store.id)
-        .in('status', ['pending', 'processing']);
+        .eq('status', 'pending');
 
-      // Top products - fetch through orders first then order_items
-      const { data: recentOrders } = await supabase
-        .from('orders')
+      // Top products - fetch through sales and sale_items
+      const { data: recentSalesData } = await supabase
+        .from('sales')
         .select('id')
         .eq('store_id', store.id)
         .gte('created_at', monthAgoISO)
-        .in('status', ['completed', 'delivered']);
+        .eq('status', 'completed');
 
       let topProducts: { name: string; sold: number; revenue: number }[] = [];
       
-      if (recentOrders && recentOrders.length > 0) {
-        const orderIds = recentOrders.map(o => o.id);
+      if (recentSalesData && recentSalesData.length > 0) {
+        const saleIds = recentSalesData.map(s => s.id);
         
         const { data: topProductData } = await supabase
-          .from('order_items')
-          .select('quantity, total, product_name')
-          .in('order_id', orderIds);
+          .from('sale_items')
+          .select('quantity, total, product:products(name)')
+          .in('sale_id', saleIds);
 
-        const productSales = (topProductData || []).reduce((acc: Record<string, { name: string; sold: number; revenue: number }>, item: any) => {
-          const name = item.product_name || 'Unknown';
+        const productSalesMap = (topProductData || []).reduce((acc: Record<string, { name: string; sold: number; revenue: number }>, item: any) => {
+          const name = item.product?.name || 'Unknown';
           if (!acc[name]) {
             acc[name] = { name, sold: 0, revenue: 0 };
           }
@@ -166,7 +169,7 @@ export function DashboardPage() {
           return acc;
         }, {});
 
-        topProducts = Object.values(productSales)
+        topProducts = Object.values(productSalesMap)
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 3);
       }
@@ -179,17 +182,17 @@ export function DashboardPage() {
 
       return {
         todaySales,
-        todayOrders: todayOrderCount,
-        avgOrderValue: todayOrderCount > 0 ? todaySales / todayOrderCount : 0,
+        todayOrders: todaySaleCount,
+        avgOrderValue: todaySaleCount > 0 ? todaySales / todaySaleCount : 0,
         salesGrowth: Math.round(salesGrowth * 10) / 10,
         weekSales,
-        weekOrders: weekOrderCount,
+        weekOrders: weekSaleCount,
         monthSales,
         monthTarget,
         targetProgress: Math.min(targetProgress, 100),
         topProducts,
-        lowStock: (lowStockProducts || []).length,
-        pendingOrders: (pendingOrders || []).length,
+        lowStock: lowStockCount,
+        pendingOrders: (pendingSales || []).length,
         activeCustomers: uniqueCustomers,
       };
     },

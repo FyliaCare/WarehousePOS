@@ -532,7 +532,7 @@ export function StockPage() {
                   value={adjustmentQuantity}
                   onChange={(e) => setAdjustmentQuantity(e.target.value)}
                   placeholder="Enter quantity"
-                  className="w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all text-center text-2xl font-bold"
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all text-center text-2xl font-bold"
                   style={{ borderColor: theme.primaryMid }}
                 />
                 {adjustmentQuantity && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -20,11 +20,13 @@ import {
   BarChart3,
   MapPin,
   Send,
+  Search,
 } from 'lucide-react';
 import { Avatar } from '@warehousepos/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@warehousepos/utils';
 import { formatPhone } from '@/lib/supabase-auth';
+import { MobileSideNav } from '@/components/layout/MobileSideNav';
 import type { CountryCode } from '@warehousepos/types';
 
 interface NavItem {
@@ -61,9 +63,18 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [expandedNav, setExpandedNav] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const { user, tenant, store, signOut } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   const country: CountryCode = tenant?.country === 'NG' ? 'NG' : 'GH';
   const isGhana = country === 'GH';
@@ -75,18 +86,24 @@ export function AppLayout() {
 
   return (
     <div className={`min-h-screen bg-background ${!isGhana ? 'theme-nigeria' : ''}`}>
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
+      {/* Mobile Side Navigation - PWA Optimized */}
+      {isMobile && (
+        <MobileSideNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Desktop sidebar overlay */}
+      {sidebarOpen && !isMobile && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border/50 transform transition-transform duration-300 ease-out lg:translate-x-0 shadow-xl lg:shadow-none',
+          'hidden lg:block', // Hide on mobile, we use MobileSideNav instead
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -165,10 +182,13 @@ export function AppLayout() {
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
           {navigation.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
-            const isExpanded = expandedNav === item.name || (hasChildren && location.pathname.startsWith(item.href));
+            // On mobile, don't expand children for Deliveries (it has a unified mobile page with tabs)
+            const skipChildrenOnMobile = isMobile && item.name === 'Deliveries';
+            const isExpanded = !skipChildrenOnMobile && (expandedNav === item.name || (hasChildren && location.pathname.startsWith(item.href)));
             const isActiveParent = hasChildren && location.pathname.startsWith(item.href);
             
-            if (hasChildren) {
+            // On mobile, treat Deliveries as a simple link (no children)
+            if (hasChildren && !skipChildrenOnMobile) {
               return (
                 <div key={item.name}>
                   <button
@@ -256,32 +276,40 @@ export function AppLayout() {
 
       {/* Main content */}
       <div className="lg:pl-72">
-        {/* Top bar - Blue theme header */}
-        <header className="sticky top-0 z-30 h-16 bg-[#1e5f9e] backdrop-blur-xl border-b border-[#14466e] flex items-center justify-between px-4 lg:px-6 shadow-md">
+        {/* Top bar - Light Blue theme header */}
+        <header className="sticky top-0 z-30 h-14 lg:h-16 bg-gradient-to-r from-[#2563eb] to-[#1d4ed8] backdrop-blur-xl border-b border-[#1d4ed8]/50 flex items-center justify-between px-3 lg:px-6 shadow-md">
           {/* Mobile menu button */}
           <button
-            className="lg:hidden p-2.5 rounded-xl transition-colors text-white/90 hover:bg-white/10"
+            className="lg:hidden p-2 rounded-xl transition-colors text-white/90 hover:bg-white/10 active:bg-white/20"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           </button>
 
-          {/* Page title - will be set by pages */}
+          {/* Page title - hidden on mobile, shown on desktop */}
           <div className="hidden lg:block" />
+          
+          {/* Mobile title */}
+          <h1 className="lg:hidden text-base font-bold text-white">WarehousePOS</h1>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 lg:gap-3">
+            {/* Search - desktop only */}
+            <button className="hidden lg:flex relative p-2.5 rounded-xl transition-colors text-white/80 hover:text-white hover:bg-white/10">
+              <Search className="w-5 h-5" />
+            </button>
+            
             {/* Notifications */}
-            <button className="relative p-2.5 rounded-xl transition-colors text-white/80 hover:text-white hover:bg-white/10">
+            <button className="relative p-2 lg:p-2.5 rounded-xl transition-colors text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full border-2 border-[#1e5f9e] bg-amber-400" />
+              <span className="absolute top-1 right-1 lg:top-1.5 lg:right-1.5 w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full border-2 border-[#2563eb] bg-amber-400" />
             </button>
 
             {/* User menu */}
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 p-2 rounded-xl transition-all duration-200 hover:bg-white/10"
+                className="flex items-center gap-2 lg:gap-3 p-1.5 lg:p-2 rounded-xl transition-all duration-200 hover:bg-white/10 active:bg-white/20"
               >
                 <Avatar
                   name={user?.full_name || 'User'}

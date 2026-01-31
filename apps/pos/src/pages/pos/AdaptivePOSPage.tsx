@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 // Lazy load both versions for better performance
 const DesktopPOS = lazy(() => import('@/pages/POSPage').then(m => ({ default: m.POSPage })));
-const MobilePOS = lazy(() => import('@/pages/pos/MobilePOSPage'));
+const MobilePOS = lazy(() => import('@/pages/pos/MobilePOSPage').then(m => ({ default: m.MobilePOSPage })));
 
 // Loading spinner
 function POSLoading() {

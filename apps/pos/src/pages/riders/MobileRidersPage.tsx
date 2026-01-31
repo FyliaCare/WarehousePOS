@@ -1,8 +1,8 @@
-﻿import { Package, ArrowLeft } from 'lucide-react';
+﻿import { Users, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 
-export default function OrdersPage() {
+export default function MobileRidersPage() {
   const { tenant } = useAuthStore();
   const isNigeria = tenant?.country === 'NG';
 
@@ -19,11 +19,11 @@ export default function OrdersPage() {
           className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
           style={{ backgroundColor: isNigeria ? '#008751' : '#FFD000' }}
         >
-          <Package className="w-10 h-10" style={{ color: isNigeria ? '#FFFFFF' : '#1A1A1A' }} />
+          <Users className="w-10 h-10" style={{ color: isNigeria ? '#FFFFFF' : '#1A1A1A' }} />
         </div>
-        <h1 className="text-2xl font-bold text-zinc-900 mb-3">Online Orders</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 mb-3">Rider Management</h1>
         <p className="text-zinc-600 mb-6">
-          Online ordering feature is coming soon! This will allow your customers to place orders through your online store.
+          Rider management feature is coming soon! Manage your delivery team from here.
         </p>
         <Link
           to="/dashboard"

@@ -11,6 +11,8 @@ import {
   Monitor,
   MapPin,
   Briefcase,
+  Settings2,
+  ChevronRight,
 } from 'lucide-react';
 import { Button, Card, Input, Switch } from '@warehousepos/ui';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -69,6 +71,16 @@ export function SettingsPage() {
                 {tab.label}
               </button>
             ))}
+            
+            {/* Advanced Settings Link */}
+            <a
+              href="/settings/advanced"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground border-t border-border mt-2 pt-3"
+            >
+              <Settings2 className="w-5 h-5" />
+              Advanced
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            </a>
           </nav>
         </Card>
 
