@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -12,38 +12,21 @@ import {
   Smartphone,
   X,
   Loader2,
-  Grid3X3,
-  LayoutList,
-  Percent,
-  ChevronRight,
   ChevronUp,
-  Check,
-  Printer,
-  ArrowLeft,
-  Pause,
-  Play,
   Receipt,
   Building2,
   Scan,
-  Home,
-  Package,
-  Tag,
-  Gift,
-  Clock,
   Store,
   Truck,
   UtensilsCrossed,
-  MessageSquare,
 } from 'lucide-react';
 import { Modal, Avatar } from '@warehousepos/ui';
 import { formatCurrency, cn } from '@warehousepos/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useCartStore, CartItem } from '@/stores/cartStore';
 import { supabase } from '@/lib/supabase';
-import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
-import type { Product, Customer, PaymentMethod, CountryCode, Sale, Category } from '@warehousepos/types';
+import type { Product, Customer, PaymentMethod, CountryCode, Sale } from '@warehousepos/types';
 
 // ============================================
 // TYPES

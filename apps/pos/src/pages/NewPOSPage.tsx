@@ -406,7 +406,7 @@ export function POSPage() {
                           </div>
                           <h3 className="font-medium text-gray-900 text-sm truncate">{product.name}</h3>
                           <p className="text-xs text-gray-500 truncate mb-1">{product.sku}</p>
-                          <p className={cn('text-base font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price, country)}</p>
+                          <p className={cn('text-base font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price || product.price || 0, country)}</p>
                         </button>
                       );
                     })}
@@ -427,7 +427,7 @@ export function POSPage() {
                             <p className="text-sm text-gray-500">{product.sku}</p>
                           </div>
                           <div className="text-right">
-                            <p className={cn('font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price, country)}</p>
+                            <p className={cn('font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price || product.price || 0, country)}</p>
                             {qty > 0 && <p className="text-xs font-medium text-gray-500">×{qty} in cart</p>}
                           </div>
                         </button>
@@ -679,7 +679,7 @@ export function POSPage() {
                     </div>
                     <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{product.name}</h3>
                     <div className="flex items-center justify-between">
-                      <span className={cn('font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price, country)}</span>
+                      <span className={cn('font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>{formatCurrency(product.selling_price || product.price || 0, country)}</span>
                       {product.track_inventory && (
                         <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', (product.stock_quantity || 0) <= 5 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500')}>
                           {product.stock_quantity || 0}
