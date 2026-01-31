@@ -13,6 +13,14 @@ import {
   Briefcase,
   Settings2,
   ChevronRight,
+  Shield,
+  Trash2,
+  Key,
+  AlertTriangle,
+  Loader2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button, Card, Input, Switch } from '@warehousepos/ui';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -25,7 +33,7 @@ import { BusinessCategoryPicker } from '@/components/settings';
 import { getBusinessCategory } from '../../../../../packages/shared/src/data/business-categories';
 import type { CountryCode } from '@warehousepos/types';
 
-type SettingsTab = 'profile' | 'store' | 'business' | 'pos' | 'notifications' | 'appearance' | 'billing';
+type SettingsTab = 'profile' | 'store' | 'business' | 'pos' | 'notifications' | 'appearance' | 'security' | 'billing';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -39,6 +47,7 @@ export function SettingsPage() {
     { id: 'pos' as const, label: 'POS Settings', icon: Receipt },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
+    { id: 'security' as const, label: 'Security', icon: Shield },
     { id: 'billing' as const, label: 'Billing', icon: CreditCard },
   ];
 
@@ -282,6 +291,10 @@ export function SettingsPage() {
                 </div>
               </div>
             </Card>
+          )}
+
+          {activeTab === 'security' && (
+            <SecurityTab user={user} />
           )}
 
           {activeTab === 'billing' && (
@@ -562,5 +575,329 @@ function BusinessTypeTab({ tenant }: { tenant: any }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Security Tab Component
+function SecurityTab({ user }: { user: any }) {
+  const { signOut } = useAuthStore();
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Password validation
+  const passwordValidation = {
+    minLength: passwordForm.newPassword.length >= 8,
+    hasUppercase: /[A-Z]/.test(passwordForm.newPassword),
+    hasLowercase: /[a-z]/.test(passwordForm.newPassword),
+    hasNumber: /[0-9]/.test(passwordForm.newPassword),
+    matches: passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.newPassword.length > 0,
+  };
+
+  const isPasswordValid = 
+    passwordValidation.minLength && 
+    passwordValidation.hasUppercase && 
+    passwordValidation.hasLowercase && 
+    passwordValidation.hasNumber &&
+    passwordValidation.matches;
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
+    
+    if (!isPasswordValid) {
+      toast.error('Please meet all password requirements');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // Use edge function for secure password change with current password verification
+      const { data, error } = await supabase.functions.invoke('change-password', {
+        body: { 
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword 
+        }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success('Password changed successfully!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordForm(false);
+    } catch (error: any) {
+      // Handle specific error codes
+      if (error.message?.includes('INVALID_CURRENT_PASSWORD') || error.message?.includes('incorrect')) {
+        toast.error('Current password is incorrect');
+      } else {
+        toast.error(error.message || 'Failed to change password');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE MY ACCOUNT') {
+      toast.error('Please type "DELETE MY ACCOUNT" to confirm');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      // Call the delete account edge function
+      const { error } = await supabase.functions.invoke('delete-account', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      toast.success('Account deletion initiated');
+      await signOut();
+    } catch (error: any) {
+      // If edge function doesn't exist, show a message to contact support
+      toast.error('Please contact support@warehousepos.com to delete your account');
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Password Change Section */}
+      <Card className="p-6">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Change Password</h2>
+            <p className="text-sm text-muted-foreground">
+              Update your password to keep your account secure
+            </p>
+          </div>
+          <Key className="w-5 h-5 text-muted-foreground" />
+        </div>
+
+        {!showPasswordForm ? (
+          <Button onClick={() => setShowPasswordForm(true)}>
+            Change Password
+          </Button>
+        ) : (
+          <div className="space-y-4 max-w-md">
+            {/* Current Password */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Current Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  placeholder="Enter current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* New Password */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                New Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Password Requirements */}
+            <div className="bg-muted rounded-lg p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                Password Requirements
+              </p>
+              <ul className="space-y-1.5">
+                <PasswordRequirement met={passwordValidation.minLength} text="At least 8 characters" />
+                <PasswordRequirement met={passwordValidation.hasUppercase} text="One uppercase letter" />
+                <PasswordRequirement met={passwordValidation.hasLowercase} text="One lowercase letter" />
+                <PasswordRequirement met={passwordValidation.hasNumber} text="One number" />
+                <PasswordRequirement met={passwordValidation.matches} text="Passwords match" />
+              </ul>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword || !isPasswordValid || !passwordForm.currentPassword}
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Changing...
+                  </>
+                ) : (
+                  'Update Password'
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Account Deletion Section */}
+      <Card className="p-6 border-destructive/50">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
+            <p className="text-sm text-muted-foreground">
+              Permanently delete your account and all associated data
+            </p>
+          </div>
+          <AlertTriangle className="w-5 h-5 text-destructive" />
+        </div>
+
+        {!showDeleteConfirm ? (
+          <Button
+            variant="destructive"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Account
+          </Button>
+        ) : (
+          <div className="space-y-4 max-w-md">
+            <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+              <p className="text-sm text-destructive font-medium mb-2">
+                ⚠️ This action cannot be undone!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete:
+              </p>
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                <li>Your account and profile</li>
+                <li>All your business data</li>
+                <li>All stores and products</li>
+                <li>All sales history and reports</li>
+                <li>All customer data</li>
+              </ul>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Type <span className="font-mono text-destructive">DELETE MY ACCOUNT</span> to confirm
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE MY ACCOUNT"
+                className="font-mono"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount || deleteConfirmText !== 'DELETE MY ACCOUNT'}
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Permanently Delete Account'
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// Password requirement indicator component
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <li className={`flex items-center gap-2 text-sm ${met ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+      {met ? (
+        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+      ) : (
+        <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30" />
+      )}
+      <span>{text}</span>
+    </li>
   );
 }

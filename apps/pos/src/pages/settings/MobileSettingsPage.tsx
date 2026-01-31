@@ -22,6 +22,13 @@ import {
   Briefcase,
   Check,
   LogOut,
+  Shield,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -47,7 +54,7 @@ const theme = {
   border: '#e2e8f0',
 };
 
-type SheetType = 'profile' | 'pos' | 'notifications' | 'appearance' | null;
+type SheetType = 'profile' | 'pos' | 'notifications' | 'appearance' | 'security' | 'deleteAccount' | null;
 
 // Haptic feedback helper
 const haptic = {
@@ -202,6 +209,30 @@ export default function MobileSettingsPage() {
     phone: user?.phone || '',
   });
 
+  // Security state
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Password validation
+  const passwordValidation = {
+    minLength: passwordForm.newPassword.length >= 8,
+    hasUppercase: /[A-Z]/.test(passwordForm.newPassword),
+    hasLowercase: /[a-z]/.test(passwordForm.newPassword),
+    hasNumber: /[0-9]/.test(passwordForm.newPassword),
+    matches: passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.newPassword.length > 0,
+  };
+
+  const isPasswordValid = 
+    passwordValidation.minLength && 
+    passwordValidation.hasUppercase && 
+    passwordValidation.hasLowercase && 
+    passwordValidation.hasNumber &&
+    passwordValidation.matches;
+
   // Theme labels
   const themeLabels: Record<string, string> = {
     light: 'Light',
@@ -235,6 +266,72 @@ export default function MobileSettingsPage() {
     haptic.medium();
     await signOut();
     navigate('/login');
+  };
+
+  // Handle password change
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword) {
+      toast.error('Please enter your current password');
+      return;
+    }
+    
+    if (!isPasswordValid) {
+      toast.error('Please meet all password requirements');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // Use edge function for secure password change with current password verification
+      const { data, error } = await supabase.functions.invoke('change-password', {
+        body: { 
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword 
+        }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      haptic.success();
+      toast.success('Password changed successfully!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setActiveSheet(null);
+    } catch (error: any) {
+      // Handle specific error codes
+      if (error.message?.includes('INVALID_CURRENT_PASSWORD') || error.message?.includes('incorrect')) {
+        toast.error('Current password is incorrect');
+      } else {
+        toast.error(error.message || 'Failed to change password');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  // Handle account deletion
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE MY ACCOUNT') {
+      toast.error('Please type "DELETE MY ACCOUNT" to confirm');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      toast.success('Account deletion initiated');
+      await signOut();
+    } catch (error: any) {
+      toast.error('Please contact support@warehousepos.com to delete your account');
+      setActiveSheet(null);
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   // ============================================
@@ -401,6 +498,157 @@ export default function MobileSettingsPage() {
     </div>
   );
 
+  const renderSecuritySheet = () => (
+    <div className="space-y-4">
+      {/* Password Change */}
+      <div className="space-y-3">
+        <p className="text-xs font-bold uppercase" style={{ color: theme.textMuted }}>Change Password</p>
+        
+        {/* Current Password */}
+        <div className="relative">
+          <input
+            type={showCurrentPassword ? 'text' : 'password'}
+            placeholder="Current Password"
+            value={passwordForm.currentPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+            className="w-full px-4 py-3 pr-12 rounded-xl text-sm"
+            style={{ backgroundColor: theme.surfaceLight, color: theme.textPrimary }}
+          />
+          <button
+            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+          >
+            {showCurrentPassword ? <EyeOff className="w-5 h-5" style={{ color: theme.textMuted }} /> : <Eye className="w-5 h-5" style={{ color: theme.textMuted }} />}
+          </button>
+        </div>
+
+        {/* New Password */}
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="New Password"
+            value={passwordForm.newPassword}
+            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+            className="w-full px-4 py-3 pr-12 rounded-xl text-sm"
+            style={{ backgroundColor: theme.surfaceLight, color: theme.textPrimary }}
+          />
+          <button
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+          >
+            {showPassword ? <EyeOff className="w-5 h-5" style={{ color: theme.textMuted }} /> : <Eye className="w-5 h-5" style={{ color: theme.textMuted }} />}
+          </button>
+        </div>
+
+        {/* Confirm Password */}
+        <input
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Confirm Password"
+          value={passwordForm.confirmPassword}
+          onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+          className="w-full px-4 py-3 rounded-xl text-sm"
+          style={{ backgroundColor: theme.surfaceLight, color: theme.textPrimary }}
+        />
+        
+        {/* Password Requirements */}
+        <div className="p-3 rounded-xl" style={{ backgroundColor: theme.surfaceLight }}>
+          <p className="text-xs font-bold uppercase mb-2" style={{ color: theme.textMuted }}>Requirements</p>
+          <div className="grid grid-cols-2 gap-1">
+            <PasswordReq met={passwordValidation.minLength} text="8+ chars" />
+            <PasswordReq met={passwordValidation.hasUppercase} text="Uppercase" />
+            <PasswordReq met={passwordValidation.hasLowercase} text="Lowercase" />
+            <PasswordReq met={passwordValidation.hasNumber} text="Number" />
+            <PasswordReq met={passwordValidation.matches} text="Match" />
+          </div>
+        </div>
+        
+        <button
+          onClick={handleChangePassword}
+          disabled={isChangingPassword || !isPasswordValid || !passwordForm.currentPassword}
+          className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+          style={{ backgroundColor: theme.primary }}
+        >
+          {isChangingPassword ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Changing...
+            </span>
+          ) : (
+            'Update Password'
+          )}
+        </button>
+      </div>
+
+      {/* Delete Account */}
+      <div className="pt-4 border-t" style={{ borderColor: theme.border }}>
+        <p className="text-xs font-bold uppercase mb-3" style={{ color: theme.danger }}>Danger Zone</p>
+        <button
+          onClick={() => setActiveSheet('deleteAccount')}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl"
+          style={{ backgroundColor: '#fee2e2' }}
+        >
+          <Trash2 className="w-4 h-4 text-red-600" />
+          <span className="text-sm font-bold text-red-600">Delete Account</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderDeleteAccountSheet = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-xl" style={{ backgroundColor: '#fee2e2' }}>
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-red-600 mb-1">This cannot be undone!</p>
+            <p className="text-xs text-red-600/80">
+              All your data including products, sales, customers, and business information will be permanently deleted.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-medium mb-2" style={{ color: theme.textSecondary }}>
+          Type <span className="font-mono font-bold text-red-600">DELETE MY ACCOUNT</span> to confirm
+        </p>
+        <input
+          type="text"
+          placeholder="DELETE MY ACCOUNT"
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+          className="w-full px-4 py-3 rounded-xl text-sm font-mono"
+          style={{ backgroundColor: theme.surfaceLight, color: theme.textPrimary }}
+        />
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => { setActiveSheet('security'); setDeleteConfirmText(''); }}
+          className="flex-1 py-3 rounded-xl text-sm font-bold"
+          style={{ backgroundColor: theme.surfaceLight, color: theme.textSecondary }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDeleteAccount}
+          disabled={isDeletingAccount || deleteConfirmText !== 'DELETE MY ACCOUNT'}
+          className="flex-1 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+          style={{ backgroundColor: theme.danger }}
+        >
+          {isDeletingAccount ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Deleting...
+            </span>
+          ) : (
+            'Delete Forever'
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: theme.background }}>
       {/* Header */}
@@ -464,6 +712,15 @@ export default function MobileSettingsPage() {
               title="Business Type"
               subtitle="Set your business category"
               onClick={() => navigate('/settings')}
+            />
+            <div className="h-px mx-3" style={{ backgroundColor: theme.border }} />
+            <SettingsRow
+              icon={Shield}
+              iconBg="#dbeafe"
+              iconColor="#2563eb"
+              title="Security"
+              subtitle="Password & account"
+              onClick={() => setActiveSheet('security')}
             />
           </div>
         </div>
@@ -574,7 +831,33 @@ export default function MobileSettingsPage() {
         >
           {renderAppearanceSheet()}
         </BottomSheet>
+
+        <BottomSheet 
+          isOpen={activeSheet === 'security'} 
+          onClose={() => setActiveSheet(null)}
+          title="Security"
+        >
+          {renderSecuritySheet()}
+        </BottomSheet>
+
+        <BottomSheet 
+          isOpen={activeSheet === 'deleteAccount'} 
+          onClose={() => { setActiveSheet(null); setDeleteConfirmText(''); }}
+          title="Delete Account"
+        >
+          {renderDeleteAccountSheet()}
+        </BottomSheet>
       </AnimatePresence>
+    </div>
+  );
+}
+
+// Password requirement mini component for mobile
+function PasswordReq({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className={`flex items-center gap-1.5 text-xs ${met ? 'text-emerald-600' : 'text-slate-400'}`}>
+      {met ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-slate-300" />}
+      <span>{text}</span>
     </div>
   );
 }

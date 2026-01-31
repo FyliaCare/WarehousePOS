@@ -10,6 +10,7 @@ import { AppLayout } from '@/layouts/AppLayout';
 
 // Pages - Auth (using email-based auth)
 import { LoginPage, RegisterPage } from '@/pages/auth';
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { CountrySelectPage } from '@/pages/auth/CountrySelectPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
@@ -114,6 +115,12 @@ function App() {
         <Route
           path="/setup"
           element={<RegisterPage />}
+        />
+        
+        {/* Password Reset route - for users resetting their password */}
+        <Route
+          path="/reset-password"
+          element={<ResetPasswordPage />}
         />
         
         {/* Other Auth routes with layout */}
