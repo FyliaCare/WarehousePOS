@@ -231,7 +231,8 @@ export interface Category extends BaseEntity, SoftDeletable {
 // ==========================================
 
 export interface Product extends BaseEntity, SoftDeletable {
-  tenant_id: string;
+  tenant_id?: string;
+  store_id: string;
   category_id?: string;
   
   name: string;
@@ -240,23 +241,26 @@ export interface Product extends BaseEntity, SoftDeletable {
   barcode?: string;
   
   cost_price: number;
-  selling_price: number;
+  price: number; // Database column name
+  selling_price?: number; // Alias for backward compatibility
   compare_price?: number;
   
-  tax_rate: number;
-  tax_inclusive: boolean;
+  tax_rate?: number;
+  tax_inclusive?: boolean;
   
   unit: string;
-  track_stock: boolean;
-  min_stock_level: number;
+  track_inventory: boolean; // Database column name
+  track_stock?: boolean; // Alias for backward compatibility
+  low_stock_threshold: number; // Database column name
+  min_stock_level?: number; // Alias for backward compatibility
   
   image_url?: string;
-  images: string[];
+  images?: string[];
   
-  has_variants: boolean;
-  variant_options: VariantOption[];
+  has_variants?: boolean;
+  variant_options?: VariantOption[];
   
-  show_online: boolean;
+  show_online?: boolean;
   is_active: boolean;
   
   // Relations (optional, for joined queries)
@@ -264,6 +268,7 @@ export interface Product extends BaseEntity, SoftDeletable {
   variants?: ProductVariant[];
   stock_level?: number;
   stock_quantity?: number; // Computed from stock_levels table
+  stock_levels?: { quantity: number }[];
 }
 
 export interface VariantOption {
@@ -272,13 +277,14 @@ export interface VariantOption {
 }
 
 export interface ProductVariant extends BaseEntity, SoftDeletable {
-  tenant_id: string;
+  tenant_id?: string;
   product_id: string;
   name: string;
   sku: string;
   barcode?: string;
   cost_price?: number;
-  selling_price: number;
+  price?: number; // Database column name
+  selling_price?: number; // Alias for backward compatibility
   options: Record<string, string>;
   image_url?: string;
   is_active: boolean;

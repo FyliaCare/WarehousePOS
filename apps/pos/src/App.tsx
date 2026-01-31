@@ -10,7 +10,7 @@ import { AppLayout } from '@/layouts/AppLayout';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CountrySelectPage } from '@/pages/auth/CountrySelectPage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { POSLayout } from '@/pages/pos/POSLayout';
+import { POSPage } from '@/pages/NewPOSPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
 import { CategoriesPage } from '@/pages/products/CategoriesPage';
 import { StockPage } from '@/pages/inventory/StockPage';
@@ -99,7 +99,7 @@ function App() {
           path="/pos"
           element={
             <ProtectedRoute>
-              <POSLayout />
+              <POSPage />
             </ProtectedRoute>
           }
         />

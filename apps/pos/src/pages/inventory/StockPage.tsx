@@ -63,7 +63,7 @@ export function StockPage() {
       if (!store?.id) return [];
       let query = supabase
         .from('stock_levels')
-        .select('*, product:products(name, sku, cost_price, selling_price, image_url, category:categories(name, color, icon))')
+        .select('*, product:products(name, sku, cost_price, price, image_url, track_inventory, low_stock_threshold, category:categories(name, color, icon))')
         .eq('store_id', store.id);
 
       if (stockFilter === 'low') {

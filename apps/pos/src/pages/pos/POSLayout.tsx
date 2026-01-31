@@ -23,6 +23,10 @@ import {
   Play,
   Receipt,
   Building2,
+  ChevronUp,
+  Scan,
+  Home,
+  Package,
 } from 'lucide-react';
 import { Modal, Avatar } from '@warehousepos/ui';
 import { formatCurrency, cn } from '@warehousepos/utils';
@@ -200,6 +204,7 @@ export function POSLayout() {
   const [discountValue, setDiscountValue] = useState('');
   const [discountType, setDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Update time every minute
@@ -253,7 +258,7 @@ export function POSLayout() {
       if (!store?.id) return [];
       let query = supabase
         .from('products')
-        .select('*, category:categories(name), variants:product_variants(*)')
+        .select('*, category:categories(name), variants:product_variants(*), stock_levels(quantity)')
         .eq('store_id', store.id)
         .eq('is_active', true);
       
@@ -266,7 +271,12 @@ export function POSLayout() {
       }
       
       const { data } = await query.order('name').limit(100);
-      return (data as unknown as Product[]) || [];
+      // Map price to selling_price and stock_levels to stock_quantity for backward compatibility
+      return ((data || []) as any[]).map(p => ({
+        ...p,
+        selling_price: p.price,
+        stock_quantity: p.stock_levels?.[0]?.quantity || 0,
+      })) as unknown as Product[];
     },
     enabled: !!store?.id,
   });
@@ -405,303 +415,686 @@ export function POSLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
-      {/* Brand Color Top Bar */}
-      <div className={cn('h-1', brandBg)} />
-      
-      {/* Top Header */}
-      <header className="h-14 bg-black text-white px-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/dashboard"
-            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Exit POS</span>
-          </Link>
-          
-          <div className="h-6 w-px bg-white/20" />
-          
-          <div className="flex items-center gap-2">
-            <div className={cn('w-6 h-6 rounded flex items-center justify-center', brandBg)}>
-              <Building2 className={cn('w-3.5 h-3.5', brandText)} />
+    <>
+      {/* ======================= MOBILE POS VIEW ======================= */}
+      <div className="lg:hidden min-h-screen flex flex-col bg-gray-50">
+        {/* Mobile Header */}
+        <header className={cn('sticky top-0 z-40 px-4 pt-3 pb-2 safe-area-pt', brandBg)}>
+          <div className="flex items-center justify-between mb-3">
+            <Link 
+              to="/dashboard" 
+              className={cn('p-2 rounded-xl bg-black/10 active:scale-95 transition-transform', brandText)}
+            >
+              <Home className="w-5 h-5" />
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-black/10">
+                <Building2 className={cn('w-4 h-4', brandText)} />
+              </div>
+              <span className={cn('font-semibold text-sm', brandText)}>{store?.name || 'Store'}</span>
             </div>
-            <span className="text-sm font-medium text-white">{store?.name}</span>
+            
+            <div className="flex items-center gap-2">
+              {heldSales.length > 0 && (
+                <button
+                  onClick={() => resumeSale(heldSales[0])}
+                  className="p-2 rounded-xl bg-amber-500 text-white active:scale-95 transition-transform relative"
+                >
+                  <Pause className="w-5 h-5" />
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {heldSales.length}
+                  </span>
+                </button>
+              )}
+              <button className={cn('p-2 rounded-xl bg-black/10 active:scale-95 transition-transform', brandText)}>
+                <Scan className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {heldSales.length > 0 && (
-            <button
-              onClick={() => resumeSale(heldSales[0])}
+          
+          {/* Mobile Search */}
+          <div className="relative">
+            <Search className={cn('absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4', brandText, 'opacity-60')} />
+            <input
+              type="text"
+              placeholder="Search products..."
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                brandBg, brandBgHover, brandText
+                'w-full h-10 pl-10 pr-4 rounded-xl text-sm font-medium',
+                'bg-white/20 placeholder:text-current placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-white/30',
+                brandText
+              )}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className={cn('absolute right-3 top-1/2 -translate-y-1/2', brandText, 'opacity-60')}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </header>
+        
+        {/* Mobile Categories Scroll */}
+        <div className="bg-white border-b border-gray-100 px-4 py-3 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all active:scale-95',
+                selectedCategory === null
+                  ? cn(brandBg, brandText, 'shadow-lg')
+                  : 'bg-gray-100 text-gray-600'
               )}
             >
-              <Play className="w-3.5 h-3.5" />
-              {heldSales.length} Held
+              All Items
             </button>
-          )}
-
-          <div className="text-right">
-            <p className="text-sm font-medium text-white">
-              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-            <p className="text-xs text-white/60">
-              {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </p>
-          </div>
-
-          <div className="h-6 w-px bg-white/20" />
-
-          <div className="flex items-center gap-2">
-            <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', brandBg)}>
-              <span className={cn('text-xs font-medium', brandText)}>
-                {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </span>
-            </div>
-            <span className="text-sm font-medium text-white">{user?.full_name?.split(' ')[0]}</span>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Products */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Search & Filters */}
-          <div className="p-4 bg-white border-b border-gray-200">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search products or scan barcode..."
-                  className="w-full h-10 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': brandAccent } as React.CSSProperties}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              
-              <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    'p-2.5 transition-colors',
-                    viewMode === 'grid' ? cn(brandBg, brandText) : 'bg-white text-gray-500 hover:bg-gray-50'
-                  )}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    'p-2.5 transition-colors',
-                    viewMode === 'list' ? cn(brandBg, brandText) : 'bg-white text-gray-500 hover:bg-gray-50'
-                  )}
-                >
-                  <LayoutList className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Categories */}
-            <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+            {categories?.map((category: any) => (
               <button
-                onClick={() => setSelectedCategory(null)}
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors',
-                  selectedCategory === null
-                    ? cn(brandBg, brandText)
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all active:scale-95',
+                  selectedCategory === category.id
+                    ? cn(brandBg, brandText, 'shadow-lg')
+                    : 'bg-gray-100 text-gray-600'
                 )}
               >
-                All Items
+                {category.name}
               </button>
-              {categories?.map((category: any) => (
+            ))}
+          </div>
+        </div>
+        
+        {/* Mobile Products Grid */}
+        <div className="flex-1 overflow-y-auto p-3 pb-28">
+          {productsLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl p-3 animate-pulse">
+                  <div className="aspect-square bg-gray-200 rounded-xl mb-3" />
+                  <div className="h-4 bg-gray-200 rounded mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : products && products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {products.map((product) => {
+                const cartItem = cartItems.find(item => item.id === product.id);
+                const cartQty = cartItem?.quantity || 0;
+                const stockLeft = (product.stock_quantity || 0) - cartQty;
+                
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => handleProductAdd(product)}
+                    disabled={stockLeft <= 0}
+                    className={cn(
+                      'bg-white rounded-2xl p-3 text-left transition-all active:scale-[0.97] relative overflow-hidden',
+                      'shadow-sm hover:shadow-md',
+                      stockLeft <= 0 && 'opacity-50'
+                    )}
+                  >
+                    {/* Quantity Badge */}
+                    {cartQty > 0 && (
+                      <div className={cn(
+                        'absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10 shadow-lg',
+                        brandBg, brandText
+                      )}>
+                        {cartQty}
+                      </div>
+                    )}
+                    
+                    {/* Product Image */}
+                    <div className={cn(
+                      'aspect-square rounded-xl mb-3 flex items-center justify-center',
+                      isNigeria ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-gradient-to-br from-yellow-50 to-yellow-100'
+                    )}>
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        <Package className={cn('w-10 h-10', isNigeria ? 'text-green-300' : 'text-yellow-400')} />
+                      )}
+                    </div>
+                    
+                    {/* Product Info */}
+                    <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{product.name}</h3>
+                    <div className="flex items-center justify-between">
+                      <span className={cn('font-bold text-base', isNigeria ? 'text-green-700' : 'text-yellow-700')}>
+                        {formatCurrency(product.selling_price, country)}
+                      </span>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded-full font-medium',
+                        stockLeft <= 5 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
+                      )}>
+                        {stockLeft} left
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center py-12">
+                <div className={cn('w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4', isNigeria ? 'bg-green-100' : 'bg-yellow-100')}>
+                  <ShoppingCart className={cn('w-10 h-10', isNigeria ? 'text-green-400' : 'text-yellow-500')} />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1 text-lg">
+                  {searchQuery ? 'No products found' : 'No products'}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {searchQuery ? 'Try a different search term' : 'Add products to start selling'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Mobile Cart Bar */}
+        {cartItems.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 safe-area-pb">
+            <button
+              onClick={() => setMobileCartOpen(true)}
+              className={cn(
+                'w-full px-4 py-4 flex items-center justify-between',
+                'bg-gradient-to-r shadow-2xl',
+                isNigeria 
+                  ? 'from-green-600 via-green-700 to-green-800' 
+                  : 'from-yellow-500 via-yellow-600 to-yellow-700'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <ShoppingCart className="w-6 h-6 text-white" />
+                  <span className={cn(
+                    'absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold',
+                    isNigeria ? 'bg-white text-green-700' : 'bg-black text-yellow-500'
+                  )}>
+                    {itemCount}
+                  </span>
+                </div>
+                <div className="text-left">
+                  <p className="text-white/70 text-xs font-medium">View Cart</p>
+                  <p className="text-white text-sm font-semibold">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-white text-xl font-bold">{formatCurrency(total, country)}</span>
+                <ChevronUp className="w-5 h-5 text-white" />
+              </div>
+            </button>
+          </div>
+        )}
+        
+        {/* Mobile Cart Sheet */}
+        {mobileCartOpen && (
+          <div className="fixed inset-0 z-[60]">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setMobileCartOpen(false)}
+            />
+            
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col animate-slideUp safe-area-pb">
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+              </div>
+              
+              {/* Cart Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Current Order</h2>
+                  <p className="text-sm text-gray-500">{cartItems.length} item{cartItems.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {cartItems.length > 0 && (
+                    <>
+                      <button
+                        onClick={holdSale}
+                        className="p-2.5 text-amber-600 bg-amber-50 rounded-xl active:scale-95 transition-transform"
+                      >
+                        <Pause className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={clearCart}
+                        className="p-2.5 text-red-600 bg-red-50 rounded-xl active:scale-95 transition-transform"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setMobileCartOpen(false)}
+                    className="p-2.5 text-gray-500 bg-gray-100 rounded-xl active:scale-95 transition-transform"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Customer Selection */}
+              <button
+                onClick={() => setIsCustomerModalOpen(true)}
+                className="mx-4 mt-3 flex items-center gap-3 p-3 bg-gray-50 rounded-xl active:bg-gray-100 transition-colors"
+              >
+                <div className={cn('w-10 h-10 rounded-full flex items-center justify-center', isNigeria ? 'bg-green-100' : 'bg-yellow-100')}>
+                  <User className={cn('w-5 h-5', isNigeria ? 'text-green-600' : 'text-yellow-600')} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-gray-900">{selectedCustomer?.name || 'Walk-in Customer'}</p>
+                  {selectedCustomer?.phone && <p className="text-xs text-gray-500">{selectedCustomer.phone}</p>}
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+              
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                {cartItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
+                    <div className={cn(
+                      'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0',
+                      isNigeria ? 'bg-green-50' : 'bg-yellow-50'
+                    )}>
+                      {item.product?.image_url ? (
+                        <img src={item.product.image_url} alt={item.name} className="w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        <Package className={cn('w-6 h-6', isNigeria ? 'text-green-300' : 'text-yellow-400')} />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">{item.name}</h3>
+                      <p className={cn('text-sm font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>
+                        {formatCurrency(item.unitPrice * item.quantity, country)}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center active:scale-95 transition-transform"
+                      >
+                        <Minus className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className={cn('w-8 h-8 rounded-lg flex items-center justify-center active:scale-95 transition-transform', brandBg)}
+                      >
+                        <Plus className={cn('w-4 h-4', brandText)} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Cart Footer */}
+              <div className="px-4 pt-3 pb-4 border-t border-gray-200 bg-gray-50/80 backdrop-blur">
+                {/* Totals */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span className="text-gray-900 font-medium">{formatCurrency(subtotal, country)}</span>
+                  </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount</span>
+                      <span>-{formatCurrency(totalDiscount, country)}</span>
+                    </div>
+                  )}
+                  {tax > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Tax</span>
+                      <span className="text-gray-900">{formatCurrency(tax, country)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="text-gray-900 font-bold">Total</span>
+                    <span className={cn('text-xl font-bold', isNigeria ? 'text-green-700' : 'text-yellow-700')}>
+                      {formatCurrency(total, country)}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setMobileCartOpen(false);
+                      setIsDiscountModalOpen(true);
+                    }}
+                    className="flex-1 h-12 px-4 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 bg-white active:scale-95 transition-transform flex items-center justify-center gap-2"
+                  >
+                    <Percent className="w-4 h-4" />
+                    Discount
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setMobileCartOpen(false);
+                      setIsPaymentModalOpen(true);
+                    }}
+                    className={cn(
+                      'flex-[2] h-12 px-4 rounded-xl text-sm font-bold active:scale-95 transition-transform flex items-center justify-center gap-2 shadow-lg',
+                      brandBg, brandText
+                    )}
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    Pay Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* ======================= DESKTOP POS VIEW ======================= */}
+      <div className="hidden lg:flex h-screen flex-col bg-gray-100 overflow-hidden">
+        {/* Brand Color Top Bar */}
+        <div className={cn('h-1', brandBg)} />
+        
+        {/* Top Header */}
+        <header className="h-14 bg-black text-white px-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Exit POS</span>
+            </Link>
+            
+            <div className="h-6 w-px bg-white/20" />
+            
+            <div className="flex items-center gap-2">
+              <div className={cn('w-6 h-6 rounded flex items-center justify-center', brandBg)}>
+                <Building2 className={cn('w-3.5 h-3.5', brandText)} />
+              </div>
+              <span className="text-sm font-medium text-white">{store?.name}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {heldSales.length > 0 && (
+              <button
+                onClick={() => resumeSale(heldSales[0])}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                  brandBg, brandBgHover, brandText
+                )}
+              >
+                <Play className="w-3.5 h-3.5" />
+                {heldSales.length} Held
+              </button>
+            )}
+
+            <div className="text-right">
+              <p className="text-sm font-medium text-white">
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-xs text-white/60">
+                {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+
+            <div className="h-6 w-px bg-white/20" />
+
+            <div className="flex items-center gap-2">
+              <div className={cn('w-8 h-8 rounded-full flex items-center justify-center', brandBg)}>
+                <span className={cn('text-xs font-medium', brandText)}>
+                  {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </span>
+              </div>
+              <span className="text-sm font-medium text-white">{user?.full_name?.split(' ')[0]}</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel - Products */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Search & Filters */}
+            <div className="p-4 bg-white border-b border-gray-200">
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search products or scan barcode..."
+                    className="w-full h-10 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                    style={{ '--tw-ring-color': brandAccent } as React.CSSProperties}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      'p-2.5 transition-colors',
+                      viewMode === 'grid' ? cn(brandBg, brandText) : 'bg-white text-gray-500 hover:bg-gray-50'
+                    )}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      'p-2.5 transition-colors',
+                      viewMode === 'list' ? cn(brandBg, brandText) : 'bg-white text-gray-500 hover:bg-gray-50'
+                    )}
+                  >
+                    <LayoutList className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
                 <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => setSelectedCategory(null)}
                   className={cn(
                     'px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors',
-                    selectedCategory === category.id
+                    selectedCategory === null
                       ? cn(brandBg, brandText)
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   )}
                 >
-                  {category.name}
+                  All Items
                 </button>
-              ))}
+                {categories?.map((category: any) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors',
+                      selectedCategory === category.id
+                        ? cn(brandBg, brandText)
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    )}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Products Grid/List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {productsLoading ? (
+                <div className={cn(
+                  'gap-3',
+                  viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6' : 'flex flex-col bg-white rounded-lg overflow-hidden'
+                )}>
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className={cn(
+                      'animate-pulse',
+                      viewMode === 'grid' ? 'bg-white rounded-lg p-3' : 'p-4 border-b border-gray-100'
+                    )}>
+                      <div className={cn(
+                        'bg-gray-200 rounded',
+                        viewMode === 'grid' ? 'aspect-square mb-2' : 'w-12 h-12'
+                      )} />
+                      {viewMode === 'grid' && (
+                        <>
+                          <div className="h-4 bg-gray-200 rounded mb-1" />
+                          <div className="h-3 bg-gray-200 rounded w-2/3" />
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : products && products.length > 0 ? (
+                <div className={cn(
+                  viewMode === 'grid' 
+                    ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3' 
+                    : 'bg-white rounded-lg overflow-hidden border border-gray-200'
+                )}>
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onAdd={() => handleProductAdd(product)}
+                      country={country}
+                      viewMode={viewMode}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ShoppingCart className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="font-medium text-gray-900 mb-1">
+                      {searchQuery ? 'No products found' : 'No products'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {searchQuery ? 'Try a different search' : 'Add products to start selling'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Products Grid/List */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {productsLoading ? (
-              <div className={cn(
-                'gap-3',
-                viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6' : 'flex flex-col bg-white rounded-lg overflow-hidden'
-              )}>
-                {[...Array(12)].map((_, i) => (
-                  <div key={i} className={cn(
-                    'animate-pulse',
-                    viewMode === 'grid' ? 'bg-white rounded-lg p-3' : 'p-4 border-b border-gray-100'
-                  )}>
-                    <div className={cn(
-                      'bg-gray-200 rounded',
-                      viewMode === 'grid' ? 'aspect-square mb-2' : 'w-12 h-12'
-                    )} />
-                    {viewMode === 'grid' && (
-                      <>
-                        <div className="h-4 bg-gray-200 rounded mb-1" />
-                        <div className="h-3 bg-gray-200 rounded w-2/3" />
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : products && products.length > 0 ? (
-              <div className={cn(
-                viewMode === 'grid' 
-                  ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3' 
-                  : 'bg-white rounded-lg overflow-hidden border border-gray-200'
-              )}>
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAdd={() => handleProductAdd(product)}
-                    country={country}
-                    viewMode={viewMode}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ShoppingCart className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="font-medium text-gray-900 mb-1">
-                    {searchQuery ? 'No products found' : 'No products'}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {searchQuery ? 'Try a different search' : 'Add products to start selling'}
-                  </p>
+          {/* Right Panel - Cart */}
+          <div className="w-96 flex flex-col bg-white border-l border-gray-200">
+            {/* Cart Header */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-gray-900">Current Order</h2>
+                <div className="flex items-center gap-2">
+                  {cartItems.length > 0 && (
+                    <>
+                      <button
+                        onClick={holdSale}
+                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                        title="Hold order"
+                      >
+                        <Pause className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={clearCart}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Clear order"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Panel - Cart */}
-        <div className="w-96 flex flex-col bg-white border-l border-gray-200">
-          {/* Cart Header */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-gray-900">Current Order</h2>
-              <div className="flex items-center gap-2">
-                {cartItems.length > 0 && (
-                  <>
-                    <button
-                      onClick={holdSale}
-                      className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                      title="Hold order"
-                    >
-                      <Pause className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={clearCart}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Clear order"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
-              </div>
+              
+              {/* Customer Selection */}
+              <button
+                onClick={() => setIsCustomerModalOpen(true)}
+                className="w-full flex items-center gap-3 p-2.5 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                  <User className="w-4 h-4 text-gray-500" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-gray-900">
+                    {selectedCustomer?.name || 'Walk-in Customer'}
+                  </p>
+                  {selectedCustomer?.phone && (
+                    <p className="text-xs text-gray-500">{selectedCustomer.phone}</p>
+                  )}
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
             
-            {/* Customer Selection */}
-            <button
-              onClick={() => setIsCustomerModalOpen(true)}
-              className="w-full flex items-center gap-3 p-2.5 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-500" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gray-900">
-                  {selectedCustomer?.name || 'Walk-in Customer'}
-                </p>
-                {selectedCustomer?.phone && (
-                  <p className="text-xs text-gray-500">{selectedCustomer.phone}</p>
-                )}
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-          
-          {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-4">
-            {cartItems.length === 0 ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center py-8">
-                  <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">No items in order</p>
+            {/* Cart Items */}
+            <div className="flex-1 overflow-y-auto px-4">
+              {cartItems.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center py-8">
+                    <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No items in order</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="py-2">
-                {cartItems.map((item) => (
-                  <CartItemRow
-                    key={item.id}
-                    item={item}
-                    country={country}
-                    onUpdateQuantity={(qty) => updateQuantity(item.id, qty)}
-                    onRemove={() => removeItem(item.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {/* Cart Footer */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
-            {/* Totals */}
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Subtotal</span>
-                <span className="text-gray-900">{formatCurrency(subtotal, country)}</span>
-              </div>
-              {totalDiscount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount</span>
-                  <span>-{formatCurrency(totalDiscount, country)}</span>
+              ) : (
+                <div className="py-2">
+                  {cartItems.map((item) => (
+                    <CartItemRow
+                      key={item.id}
+                      item={item}
+                      country={country}
+                      onUpdateQuantity={(qty) => updateQuantity(item.id, qty)}
+                      onRemove={() => removeItem(item.id)}
+                    />
+                  ))}
                 </div>
               )}
-              {tax > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Tax</span>
-                  <span className="text-gray-900">{formatCurrency(tax, country)}</span>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 border-t border-gray-200 text-base font-semibold">
-                <span className="text-gray-900">Total</span>
-                <span className="text-gray-900">{formatCurrency(total, country)}</span>
-              </div>
             </div>
+            
+            {/* Cart Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              {/* Totals */}
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="text-gray-900">{formatCurrency(subtotal, country)}</span>
+                </div>
+                {totalDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(totalDiscount, country)}</span>
+                  </div>
+                )}
+                {tax > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tax</span>
+                    <span className="text-gray-900">{formatCurrency(tax, country)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-gray-200 text-base font-semibold">
+                  <span className="text-gray-900">Total</span>
+                  <span className="text-gray-900">{formatCurrency(total, country)}</span>
+                </div>
+              </div>
 
             {/* Actions */}
             <div className="flex gap-2">
@@ -966,7 +1359,7 @@ export function POSLayout() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 

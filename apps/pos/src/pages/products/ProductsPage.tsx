@@ -24,7 +24,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Product, Category, CountryCode, Currency } from '@warehousepos/types';
-import { ProductForm } from '@/components/products/ProductForm';
+import { ProductFormSimple } from '@/components/products/ProductFormSimple';
 
 export function ProductsPage() {
   const { tenant, store } = useAuthStore();
@@ -77,14 +77,14 @@ export function ProductsPage() {
     enabled: !!store?.id,
   });
 
-  // Fetch products
+  // Fetch products with stock levels joined
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', store?.id, searchQuery, selectedCategory, selectedStatus],
     queryFn: async () => {
       if (!store?.id) return [];
       let query = supabase
         .from('products')
-        .select('*, category:categories(name)')
+        .select('*, category:categories(name), stock_levels(quantity)')
         .eq('store_id', store.id);
 
       if (searchQuery) {
@@ -102,7 +102,12 @@ export function ProductsPage() {
       }
 
       const { data } = await query.order('created_at', { ascending: false });
-      return data || [];
+      
+      // Map stock_levels to stock_quantity for easier access
+      return (data || []).map((product: any) => ({
+        ...product,
+        stock_quantity: product.stock_levels?.[0]?.quantity || 0,
+      }));
     },
     enabled: !!store?.id,
   });
@@ -146,8 +151,8 @@ export function ProductsPage() {
   // Stats
   const totalProducts = products?.length || 0;
   const activeProducts = products?.filter((p: any) => p.is_active).length || 0;
-  const lowStockProducts = products?.filter((p: any) => (p.stock_quantity || 0) < 10).length || 0;
-  const totalValue = products?.reduce((sum: number, p: any) => sum + ((p.selling_price || 0) * (p.stock_quantity || 0)), 0) || 0;
+  const lowStockProducts = products?.filter((p: any) => (p.stock_quantity || 0) < (p.low_stock_threshold || 10)).length || 0;
+  const totalValue = products?.reduce((sum: number, p: any) => sum + ((p.price || 0) * (p.stock_quantity || 0)), 0) || 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.primaryLight }}>
@@ -366,7 +371,7 @@ export function ProductsPage() {
                     </div>
 
                     {/* Stock Warning */}
-                    {(product.stock_quantity || 0) < 10 && (
+                    {(product.stock_quantity || 0) < (product.low_stock_threshold || 10) && (
                       <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
                         Low Stock
                       </div>
@@ -403,7 +408,7 @@ export function ProductsPage() {
                     </p>
                     <div className="flex items-center justify-between">
                       <p className="text-base font-bold" style={{ color: theme.textOnLight }}>
-                        {formatPrice(product.selling_price || 0)}
+                        {formatPrice(product.price || 0)}
                       </p>
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: theme.primaryLight, color: theme.textOnLight }}>
                         {product.stock_quantity || 0} in stock
@@ -468,7 +473,7 @@ export function ProductsPage() {
                     {/* Price */}
                     <div className="col-span-2 text-right">
                       <p className="font-semibold text-sm" style={{ color: theme.textOnLight }}>
-                        {formatPrice(product.selling_price || 0)}
+                        {formatPrice(product.price || 0)}
                       </p>
                       <p className="text-xs text-zinc-400">
                         Cost: {formatPrice(product.cost_price || 0)}
@@ -479,7 +484,7 @@ export function ProductsPage() {
                     <div className="col-span-1 text-center">
                       <span 
                         className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${
-                          (product.stock_quantity || 0) < 10 
+                          (product.stock_quantity || 0) < (product.low_stock_threshold || 10) 
                             ? 'bg-amber-100 text-amber-700' 
                             : 'bg-emerald-100 text-emerald-700'
                         }`}
@@ -593,11 +598,12 @@ export function ProductsPage() {
             
             {/* Panel Content */}
             <div className="overflow-y-auto h-[calc(100%-80px)] p-6">
-              <ProductForm
+              <ProductFormSimple
                 product={editingProduct}
                 categories={categories || []}
                 currency={currency}
                 onSuccess={handleFormClose}
+                onCancel={handleFormClose}
               />
             </div>
           </div>

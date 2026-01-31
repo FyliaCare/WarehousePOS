@@ -1,0 +1,8 @@
+[
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Coca-Cola 500ml","sku":"COK-500","selling_price":5,"cost_price":3,"track_stock":true,"is_active":true,"tax_rate":0},
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Fanta Orange","sku":"FAN-500","selling_price":5,"cost_price":3,"track_stock":true,"is_active":true,"tax_rate":0},
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Sprite 500ml","sku":"SPR-500","selling_price":5,"cost_price":3,"track_stock":true,"is_active":true,"tax_rate":0},
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Voltic Water 1.5L","sku":"VOL-15","selling_price":3,"cost_price":1.5,"track_stock":true,"is_active":true,"tax_rate":0},
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Energy Drink","sku":"ENG-250","selling_price":8,"cost_price":5,"track_stock":true,"is_active":true,"tax_rate":0},
+  {"tenant_id":"00000000-0000-0000-0000-000000000001","name":"Pringles Original","sku":"PRG-ORI","selling_price":15,"cost_price":10,"track_stock":true,"is_active":true,"tax_rate":0}
+]

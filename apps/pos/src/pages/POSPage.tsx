@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   ShoppingCart,
@@ -10,22 +10,90 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
-  Receipt,
+  X,
   Loader2,
+  Grid3X3,
+  LayoutList,
+  Percent,
+  ChevronRight,
+  ChevronUp,
+  Check,
+  Printer,
+  ArrowLeft,
+  Pause,
+  Play,
+  Receipt,
+  Building2,
+  Scan,
+  Home,
+  Package,
+  Tag,
+  Gift,
+  Clock,
+  Store,
+  Truck,
+  UtensilsCrossed,
+  MessageSquare,
 } from 'lucide-react';
-import { Button, Input, Modal, Avatar, EmptyState } from '@warehousepos/ui';
+import { Modal, Avatar } from '@warehousepos/ui';
 import { formatCurrency, cn } from '@warehousepos/utils';
 import { useAuthStore } from '@/stores/authStore';
-import { useCartStore } from '@/stores/cartStore';
+import { useCartStore, CartItem } from '@/stores/cartStore';
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
-import type { Product, Customer, PaymentMethod, CountryCode, Sale } from '@warehousepos/types';
+import { Link } from 'react-router-dom';
+import type { Product, Customer, PaymentMethod, CountryCode, Sale, Category } from '@warehousepos/types';
+
+// ============================================
+// TYPES
+// ============================================
+
+interface HeldSale {
+  id: string;
+  items: CartItem[];
+  customer: Customer | null;
+  timestamp: Date;
+  note?: string;
+  fulfillmentType: FulfillmentType;
+}
+
+type FulfillmentType = 'pickup' | 'delivery' | 'dine-in';
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+const FULFILLMENT_OPTIONS: { type: FulfillmentType; icon: React.ReactNode; label: string }[] = [
+  { type: 'pickup', icon: <Store className="w-4 h-4" />, label: 'Pickup' },
+  { type: 'delivery', icon: <Truck className="w-4 h-4" />, label: 'Delivery' },
+  { type: 'dine-in', icon: <UtensilsCrossed className="w-4 h-4" />, label: 'Dine-In' },
+];
+
+const PAYMENT_METHODS: { method: PaymentMethod; icon: React.ReactNode; label: string; color: string }[] = [
+  { method: 'cash', icon: <Banknote className="w-5 h-5" />, label: 'Cash', color: 'bg-green-100 text-green-600' },
+  { method: 'card', icon: <CreditCard className="w-5 h-5" />, label: 'Card', color: 'bg-blue-100 text-blue-600' },
+  { method: 'momo', icon: <Smartphone className="w-5 h-5" />, label: 'Mobile Money', color: 'bg-yellow-100 text-yellow-600' },
+  { method: 'transfer', icon: <Building2 className="w-5 h-5" />, label: 'Bank Transfer', color: 'bg-purple-100 text-purple-600' },
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export function POSPage() {
-  const { tenant, store } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { tenant, store, user } = useAuthStore();
   const country: CountryCode = tenant?.country === 'NG' ? 'NG' : 'GH';
   
-  // Cart state
+  // Theme based on country
+  const isNigeria = country === 'NG';
+  const brandBg = isNigeria ? 'bg-[#008751]' : 'bg-[#FFD000]';
+  const brandBgHover = isNigeria ? 'hover:bg-[#006b41]' : 'hover:bg-[#E6BB00]';
+  const brandText = isNigeria ? 'text-white' : 'text-black';
+  const brandRing = isNigeria ? 'ring-[#008751]' : 'ring-[#FFD000]';
+  
+  // Cart store
   const {
     items: cartItems,
     customer: selectedCustomer,
@@ -37,17 +105,24 @@ export function POSPage() {
     addItem,
     updateQuantity,
     removeItem,
+    setItemDiscount,
     setCustomer,
+    setDiscount,
+    setNotes,
     clearCart,
+    notes: cartNotes,
   } = useCartStore();
   
-  // Local state
+  // UI State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Mobile-specific state
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -72,7 +147,7 @@ export function POSPage() {
       if (!store?.id) return [];
       let query = supabase
         .from('products')
-        .select('*, category:categories(name), variants:product_variants(*)')
+        .select('*, category:categories(name), variants:product_variants(*), stock_levels(quantity)')
         .eq('store_id', store.id)
         .eq('is_active', true);
       
@@ -85,7 +160,12 @@ export function POSPage() {
       }
       
       const { data } = await query.order('name').limit(50);
-      return (data as unknown as Product[]) || [];
+      // Map price to selling_price and stock_levels to stock_quantity for backward compatibility
+      return ((data || []) as any[]).map(p => ({
+        ...p,
+        selling_price: p.price,
+        stock_quantity: p.stock_levels?.[0]?.quantity || 0,
+      })) as unknown as Product[];
     },
     enabled: !!store?.id,
   });
@@ -186,7 +266,338 @@ export function POSPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4 -m-4 lg:-m-6 p-4 lg:p-6">
+    <>
+      {/* ============================================= */}
+      {/* MOBILE POS VIEW (Hidden on lg screens) */}
+      {/* ============================================= */}
+      <div className="lg:hidden -m-4 min-h-screen bg-background flex flex-col">
+        {/* Mobile Header */}
+        <div className="sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-border/50">
+          {/* Search Bar */}
+          <div className="p-4 pb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="w-full pl-10 pr-12 py-3 bg-muted border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg bg-card flex items-center justify-center border border-border">
+                <Scan className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Categories Scroll */}
+          <div className="px-4 pb-3">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={cn(
+                  'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all',
+                  selectedCategory === null
+                    ? isNigeria 
+                      ? 'bg-nigeria-green-500 text-white' 
+                      : 'bg-ghana-gold-500 text-black'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                All
+              </button>
+              {categories?.map((category: any) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={cn(
+                    'px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all',
+                    selectedCategory === category.id
+                      ? isNigeria 
+                        ? 'bg-nigeria-green-500 text-white' 
+                        : 'bg-ghana-gold-500 text-black'
+                      : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Products Grid - Mobile */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 pb-32">
+          {productsLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl p-3 animate-pulse">
+                  <div className="aspect-square bg-muted rounded-xl mb-2" />
+                  <div className="h-4 bg-muted rounded mb-1" />
+                  <div className="h-5 bg-muted rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : products && products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {products.map((product: any) => {
+                const inCart = cartItems.find(item => item.product.id === product.id);
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => handleProductClick(product)}
+                    className={cn(
+                      "bg-card rounded-2xl p-3 text-left transition-all active:scale-95 border-2",
+                      inCart 
+                        ? isNigeria 
+                          ? "border-nigeria-green-500 shadow-lg" 
+                          : "border-ghana-gold-500 shadow-lg"
+                        : "border-transparent"
+                    )}
+                  >
+                    <div className="relative aspect-square bg-muted rounded-xl mb-2 flex items-center justify-center overflow-hidden">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-4xl">📦</span>
+                      )}
+                      {inCart && (
+                        <div className={cn(
+                          "absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                          isNigeria 
+                            ? "bg-nigeria-green-500 text-white" 
+                            : "bg-ghana-gold-500 text-black"
+                        )}>
+                          {inCart.quantity}
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="font-semibold text-foreground text-sm truncate">{product.name}</h3>
+                    <p className={cn(
+                      "text-base font-bold mt-1",
+                      isNigeria ? "text-nigeria-green-600 dark:text-nigeria-green-400" : "text-ghana-gold-600 dark:text-ghana-gold-400"
+                    )}>
+                      {formatCurrency(product.selling_price, country)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
+                <ShoppingCart className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <p className="font-semibold text-foreground">No products found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {searchQuery ? 'Try a different search' : 'Add products to get started'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Cart Bottom Bar */}
+        {cartItems.length > 0 && !mobileCartOpen && (
+          <div 
+            className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-card/95 backdrop-blur-xl border-t border-border/50 safe-area-pb"
+            onClick={() => setMobileCartOpen(true)}
+          >
+            <div className={cn(
+              "flex items-center gap-4 p-4 rounded-2xl",
+              isNigeria 
+                ? "bg-gradient-to-r from-nigeria-green-500 to-nigeria-green-600" 
+                : "bg-gradient-to-r from-ghana-gold-400 to-ghana-gold-600"
+            )}>
+              <div className="relative">
+                <ShoppingCart className={cn("w-6 h-6", isNigeria ? "text-white" : "text-black")} />
+                <span className={cn(
+                  "absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
+                  isNigeria ? "bg-white text-nigeria-green-600" : "bg-black text-ghana-gold-400"
+                )}>
+                  {itemCount}
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className={cn("text-xs opacity-80", isNigeria ? "text-white" : "text-black")}>
+                  {itemCount} item{itemCount > 1 ? 's' : ''} in cart
+                </p>
+                <p className={cn("text-lg font-bold", isNigeria ? "text-white" : "text-black")}>
+                  {formatCurrency(total, country)}
+                </p>
+              </div>
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center",
+                isNigeria ? "bg-white/20" : "bg-black/20"
+              )}>
+                <ChevronUp className={cn("w-6 h-6", isNigeria ? "text-white" : "text-black")} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Cart Sheet */}
+        {mobileCartOpen && (
+          <div className="fixed inset-0 z-50">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileCartOpen(false)}
+            />
+            
+            {/* Cart Panel */}
+            <div className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl max-h-[85vh] flex flex-col animate-slideUp">
+              {/* Handle */}
+              <div className="flex justify-center py-3">
+                <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
+              </div>
+              
+              {/* Header */}
+              <div className="px-5 pb-4 flex items-center justify-between border-b border-border/50">
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Your Cart</h2>
+                  <p className="text-sm text-muted-foreground">{itemCount} item{itemCount > 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {cartItems.length > 0 && (
+                    <button 
+                      onClick={clearCart}
+                      className="px-3 py-2 text-sm font-semibold text-destructive"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setMobileCartOpen(false)}
+                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Customer Selection */}
+              <div className="px-5 py-3 border-b border-border/50">
+                <button
+                  onClick={() => {
+                    setMobileCartOpen(false);
+                    setIsCustomerModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-muted rounded-xl active:scale-[0.98] transition-transform"
+                >
+                  <Avatar name={selectedCustomer?.name || 'Walk-in'} size="sm" />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-semibold text-foreground">
+                      {selectedCustomer?.name || 'Walk-in Customer'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedCustomer?.phone || 'Tap to select customer'}
+                    </p>
+                  </div>
+                  <User className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
+                {cartItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl"
+                  >
+                    <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {item.product.image_url ? (
+                        <img src={item.product.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl">📦</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(item.unitPrice, country)} each
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center active:scale-95"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center active:scale-95"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-foreground text-sm">
+                        {formatCurrency(item.total, country)}
+                      </p>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="text-destructive text-xs font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Cart Footer */}
+              <div className="px-5 py-4 border-t border-border/50 bg-muted/30 safe-area-pb">
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{formatCurrency(subtotal, country)}</span>
+                  </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="text-destructive font-medium">-{formatCurrency(totalDiscount, country)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+                    <span>Total</span>
+                    <span className={isNigeria ? "text-nigeria-green-600 dark:text-nigeria-green-400" : "text-ghana-gold-600 dark:text-ghana-gold-400"}>
+                      {formatCurrency(total, country)}
+                    </span>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setMobileCartOpen(false);
+                    setIsPaymentModalOpen(true);
+                  }}
+                  disabled={cartItems.length === 0}
+                  className={cn(
+                    "w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2",
+                    isNigeria 
+                      ? "bg-nigeria-green-500 text-white disabled:bg-nigeria-green-500/50" 
+                      : "bg-ghana-gold-500 text-black disabled:bg-ghana-gold-500/50"
+                  )}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Checkout • {formatCurrency(total, country)}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================= */}
+      {/* DESKTOP POS VIEW (Hidden on mobile) */}
+      {/* ============================================= */}
+      <div className="hidden lg:flex h-[calc(100vh-7rem)] gap-4 -m-4 lg:-m-6 p-4 lg:p-6">
       {/* Left Panel - Products */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Search & Categories */}
@@ -522,6 +933,7 @@ export function POSPage() {
           )}
         </div>
       </Modal>
-    </div>
+      </div>
+    </>
   );
 }

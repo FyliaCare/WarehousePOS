@@ -78,8 +78,8 @@ export const useCartStore = create<CartState>()(
             ),
           }));
         } else {
-          // Add new item
-          const unitPrice = variant?.selling_price || product.selling_price;
+          // Add new item - use selling_price (which may be mapped from price) or price directly
+          const unitPrice = variant?.selling_price || variant?.price || product.selling_price || (product as any).price || 0;
           const newItem: CartItem = {
             id: itemId,
             product,

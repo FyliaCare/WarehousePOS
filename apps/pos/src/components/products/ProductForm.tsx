@@ -132,10 +132,9 @@ export function ProductForm({ product, categories, currency, onSuccess }: Produc
             description: data.description || null,
             category_id: data.category_id || null,
             cost_price: data.cost_price,
-            selling_price: data.selling_price,
+            price: data.selling_price,
             unit: data.unit,
-            track_stock: data.track_stock,
-            min_stock_level: data.min_stock_level,
+            track_inventory: data.track_stock,
           } as never)
           .eq('id', product.id);
         if (error) throw error;
@@ -147,10 +146,9 @@ export function ProductForm({ product, categories, currency, onSuccess }: Produc
           description: data.description || null,
           category_id: data.category_id || null,
           cost_price: data.cost_price,
-          selling_price: data.selling_price,
+          price: data.selling_price,
           unit: data.unit,
-          track_stock: data.track_stock,
-          min_stock_level: data.min_stock_level,
+          track_inventory: data.track_stock,
         } as never);
         if (error) throw error;
       }
