@@ -1,21 +1,30 @@
+/**
+ * Register Page
+ * Clean, multi-step registration with business setup
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Loader2, Mail, Lock, Eye, EyeOff, User, Building2, Sparkles, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { signUpWithEmail, setupBusinessProfile } from '@/lib/email-auth-simple';
+import { 
+  Loader2, Mail, Lock, Eye, EyeOff, User, Building2, 
+  Sparkles, CheckCircle2, ArrowRight, AlertCircle, RefreshCw
+} from 'lucide-react';
+import { signUp, setupBusiness, getCurrentUser, resendVerificationEmail } from '@/lib/auth-service';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
-import type { CountryCode } from '@warehousepos/types';
 
-type Step = 'account' | 'business' | 'success';
+type Step = 'account' | 'verify-email' | 'business' | 'success';
+type Country = 'GH' | 'NG';
 
 export function RegisterPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isInitialized, refreshUser } = useAuthStore();
+  const { isAuthenticated, isInitialized, refreshUser } = useAuthStore();
   
   const [step, setStep] = useState<Step>('account');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
   
   // Account info
   const [email, setEmail] = useState('');
@@ -24,125 +33,186 @@ export function RegisterPage() {
   
   // Business info
   const [businessName, setBusinessName] = useState('');
-  const [country, setCountry] = useState<CountryCode>('GH');
+  const [country, setCountry] = useState<Country>('GH');
   const [phone, setPhone] = useState('');
-  
-  // User ID from sign up
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Handle redirect from login (user needs profile setup)
+  // Check if user came from login (needs business setup)
   useEffect(() => {
-    const state = location.state as { userId?: string } | null;
-    if (state?.userId) {
-      setUserId(state.userId);
-      setStep('business');
-    }
+    const checkExistingUser = async () => {
+      const state = location.state as { fromLogin?: boolean } | null;
+      
+      if (state?.fromLogin) {
+        // User signed in but needs business setup
+        const { user, needsBusinessSetup } = await getCurrentUser();
+        
+        if (user && needsBusinessSetup) {
+          setFullName(user.fullName || '');
+          setStep('business');
+        }
+      }
+    };
+    
+    checkExistingUser();
   }, [location.state]);
 
-  // Redirect if already logged in with profile
+  // Redirect if already logged in with complete profile
   useEffect(() => {
-    if (isInitialized && user) {
-      navigate('/dashboard');
+    if (isInitialized && isAuthenticated) {
+      // Check if they have business setup
+      const checkProfile = async () => {
+        const { needsBusinessSetup } = await getCurrentUser();
+        if (!needsBusinessSetup) {
+          navigate('/dashboard', { replace: true });
+        } else {
+          setStep('business');
+        }
+      };
+      checkProfile();
     }
-  }, [isInitialized, user, navigate]);
+  }, [isInitialized, isAuthenticated, navigate]);
 
-  const isGhana = country === 'GH';
-  const progress = step === 'account' ? 50 : step === 'business' ? 75 : 100;
+  // Clear error when inputs change
+  useEffect(() => {
+    setError(null);
+  }, [email, password, fullName, businessName, phone]);
+
+  const progress = step === 'account' ? 33 : step === 'verify-email' ? 50 : step === 'business' ? 75 : 100;
 
   // Handle account creation
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
+    if (!fullName.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
     if (!email.trim()) {
-      toast.error('Please enter your email');
+      setError('Please enter your email address');
       return;
     }
     if (!password) {
-      toast.error('Please enter a password');
+      setError('Please create a password');
       return;
     }
     if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    if (!fullName.trim()) {
-      toast.error('Please enter your full name');
+      setError('Password must be at least 6 characters');
       return;
     }
     
     setIsLoading(true);
+    
     try {
-      const result = await signUpWithEmail(email, password, fullName);
+      const result = await signUp(email, password, fullName);
       
-      if (result.success) {
-        setUserId(result.userId || null);
-        setStep('business');
-        toast.success('Account created! Now set up your business.');
-      } else {
-        toast.error(result.error || 'Failed to create account');
+      if (!result.success) {
+        setError(result.error || 'Failed to create account');
+        return;
       }
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      toast.error('An error occurred. Please try again.');
+      
+      // Check if email verification is required
+      if (result.needsEmailVerification) {
+        toast.success('Account created! Please check your email to verify.');
+        setStep('verify-email');
+      } else {
+        // Email verification not required (disabled in Supabase)
+        toast.success('Account created! Now set up your business.');
+        setStep('business');
+      }
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle resend verification email
+  const handleResendVerification = async () => {
+    if (resendingEmail) return;
+    
+    setResendingEmail(true);
+    try {
+      const result = await resendVerificationEmail(email);
+      if (result.success) {
+        toast.success('Verification email sent! Check your inbox.');
+      } else {
+        toast.error(result.error || 'Failed to resend email');
+      }
+    } catch (err) {
+      toast.error('Failed to resend verification email');
+    } finally {
+      setResendingEmail(false);
     }
   };
 
   // Handle business setup
   const handleSetupBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!businessName.trim()) {
-      toast.error('Please enter your business name');
-      return;
-    }
-    
-    if (!userId) {
-      toast.error('Session expired. Please sign up again.');
-      setStep('account');
+      setError('Please enter your business name');
       return;
     }
     
     setIsLoading(true);
+    
     try {
-      const formattedPhone = phone ? (isGhana ? '+233' : '+234') + phone.replace(/^0+/, '') : undefined;
-      
-      const result = await setupBusinessProfile({
-        userId,
+      const result = await setupBusiness({
         businessName: businessName.trim(),
         fullName: fullName.trim() || 'Business Owner',
         country,
-        phone: formattedPhone,
+        phone: phone.trim() || undefined,
       });
       
-      if (result.success) {
-        setStep('success');
-        toast.success('Business setup complete! 🎉');
-        
-        // Refresh user data
-        await refreshUser();
-        
-        // Redirect after a short delay
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-      } else {
-        toast.error(result.error || 'Failed to set up business');
+      if (!result.success) {
+        setError(result.error || 'Failed to set up business');
+        return;
       }
-    } catch (error: any) {
-      console.error('Business setup error:', error);
-      toast.error('An error occurred. Please try again.');
+      
+      setStep('success');
+      toast.success('Business setup complete! 🎉');
+      
+      // Refresh user data and redirect
+      await refreshUser();
+      
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 2000);
+    } catch (err: any) {
+      console.error('Business setup error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Success view
+  if (step === 'success') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="w-20 h-20 mx-auto mb-6 bg-emerald-100 rounded-full flex items-center justify-center">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">You're All Set! 🎉</h1>
+          <p className="text-gray-600 mb-6">
+            Your business <strong>{businessName}</strong> is ready to go.
+          </p>
+          <div className="animate-pulse text-sm text-gray-500">
+            Redirecting to dashboard...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Form */}
       <div className="w-full lg:w-[45%] min-h-screen bg-white flex flex-col">
-        {/* Top Bar */}
+        {/* Header */}
         <div className="p-4 flex items-center justify-between shrink-0">
           <img 
             src="/logo black.png" 
@@ -153,7 +223,7 @@ export function RegisterPage() {
             <span className="text-gray-500 hidden sm:inline">Already have an account?</span>
             <Link 
               to="/login"
-              className="px-3 py-1.5 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
             >
               Sign In
             </Link>
@@ -162,7 +232,7 @@ export function RegisterPage() {
 
         {/* Progress Bar */}
         <div className="px-6 lg:px-12">
-          <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -174,13 +244,13 @@ export function RegisterPage() {
         <div className="flex-1 flex items-center justify-center px-6 lg:px-12 py-8">
           <div className="w-full max-w-md">
             
-            {/* Step: Account */}
+            {/* STEP 1: Account */}
             {step === 'account' && (
               <>
-                <div className="mb-6">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full mb-3">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-xs font-medium text-emerald-700">Step 1 of 2</span>
+                <div className="mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full mb-4">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-medium text-emerald-700">Step 1 of 3</span>
                   </div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     Create your account
@@ -190,14 +260,22 @@ export function RegisterPage() {
                   </p>
                 </div>
 
-                <form onSubmit={handleCreateAccount} className="space-y-4">
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateAccount} className="space-y-5">
                   {/* Full Name */}
                   <div>
-                    <label htmlFor="fullName" className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    <label htmlFor="fullName" className="block text-sm font-semibold text-gray-900 mb-2">
                       Full name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         id="fullName"
                         type="text"
@@ -205,18 +283,19 @@ export function RegisterPage() {
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="John Doe"
                         autoComplete="name"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
+                        disabled={isLoading}
+                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all disabled:bg-gray-50"
                       />
                     </div>
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
                       Email address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         id="email"
                         type="email"
@@ -224,77 +303,155 @@ export function RegisterPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         autoComplete="email"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
+                        disabled={isLoading}
+                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all disabled:bg-gray-50"
                       />
                     </div>
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
                       Password
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="At least 6 characters"
+                        placeholder="Create a strong password"
                         autoComplete="new-password"
-                        className="w-full pl-10 pr-12 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
+                        disabled={isLoading}
+                        className="w-full pl-12 pr-12 py-3.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all disabled:bg-gray-50"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Must be at least 6 characters
+                    </p>
                   </div>
 
                   {/* Submit */}
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3.5 rounded-xl transition-all transform hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={20} />
-                        <span>Creating account...</span>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Creating account...
                       </>
                     ) : (
                       <>
-                        <span>Continue</span>
-                        <ArrowRight className="w-4 h-4" />
+                        Continue
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <p className="mt-6 text-center text-sm text-gray-500">
+                  By signing up, you agree to our{' '}
+                  <a href="#" className="text-emerald-600 hover:underline">Terms</a>
+                  {' '}and{' '}
+                  <a href="#" className="text-emerald-600 hover:underline">Privacy Policy</a>
+                </p>
+              </>
+            )}
+
+            {/* STEP 2: Email Verification */}
+            {step === 'verify-email' && (
+              <>
+                <div className="mb-8 text-center">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Mail className="w-10 h-10 text-emerald-600" />
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full mb-4">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-medium text-emerald-700">Step 2 of 3</span>
+                  </div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    Check your email
+                  </h1>
+                  <p className="text-gray-600">
+                    We sent a verification link to:
+                  </p>
+                  <p className="font-semibold text-gray-900 mt-1">{email}</p>
+                </div>
+
+                <div className="bg-emerald-50 rounded-xl p-4 mb-6">
+                  <h3 className="font-semibold text-gray-900 mb-2">What to do:</h3>
+                  <ol className="text-sm text-gray-700 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                      Check your inbox for an email from WarehousePOS
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                      Click the verification link in the email
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                      Complete your business setup
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="text-center space-y-4">
+                  <p className="text-sm text-gray-500">
+                    Didn't receive the email?
+                  </p>
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={resendingEmail}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                  >
+                    {resendingEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Resend verification email
                       </>
                     )}
                   </button>
 
-                  <p className="text-xs text-center text-gray-500 mt-4">
-                    By signing up, you agree to our Terms of Service and Privacy Policy
-                  </p>
-                </form>
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        setStep('account');
+                        setEmail('');
+                        setPassword('');
+                        setFullName('');
+                      }}
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      Use a different email address
+                    </button>
+                  </div>
+                </div>
               </>
             )}
 
-            {/* Step: Business */}
+            {/* STEP 3: Business Setup */}
             {step === 'business' && (
               <>
-                <div className="mb-6">
-                  <button
-                    onClick={() => setStep('account')}
-                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back
-                  </button>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full mb-3">
-                    <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-xs font-medium text-emerald-700">Step 2 of 2</span>
+                <div className="mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full mb-4">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-medium text-emerald-700">Step 3 of 3</span>
                   </div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     Set up your business
@@ -304,83 +461,84 @@ export function RegisterPage() {
                   </p>
                 </div>
 
-                <form onSubmit={handleSetupBusiness} className="space-y-4">
-                  {/* Country Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Country
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCountry('GH')}
-                        className={`relative p-3 rounded-xl border-2 transition-all ${
-                          country === 'GH'
-                            ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        {country === 'GH' && (
-                          <CheckCircle2 className="absolute -top-1.5 -right-1.5 w-5 h-5 text-emerald-500 bg-white rounded-full" />
-                        )}
-                        <div className="text-2xl mb-1">🇬🇭</div>
-                        <div className="font-bold text-gray-900 text-sm">Ghana</div>
-                        <div className="text-xs text-gray-500">GHS (₵)</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCountry('NG')}
-                        className={`relative p-3 rounded-xl border-2 transition-all ${
-                          country === 'NG'
-                            ? 'border-emerald-500 bg-emerald-50 shadow-md'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                      >
-                        {country === 'NG' && (
-                          <CheckCircle2 className="absolute -top-1.5 -right-1.5 w-5 h-5 text-emerald-500 bg-white rounded-full" />
-                        )}
-                        <div className="text-2xl mb-1">🇳🇬</div>
-                        <div className="font-bold text-gray-900 text-sm">Nigeria</div>
-                        <div className="text-xs text-gray-500">NGN (₦)</div>
-                      </button>
-                    </div>
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
                   </div>
+                )}
 
+                <form onSubmit={handleSetupBusiness} className="space-y-5">
                   {/* Business Name */}
                   <div>
-                    <label htmlFor="businessName" className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    <label htmlFor="businessName" className="block text-sm font-semibold text-gray-900 mb-2">
                       Business name
                     </label>
                     <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         id="businessName"
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="My Awesome Store"
-                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
+                        disabled={isLoading}
+                        className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all disabled:bg-gray-50"
                       />
+                    </div>
+                  </div>
+
+                  {/* Country Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Country
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { code: 'GH' as Country, name: 'Ghana', flag: '🇬🇭', currency: 'GHS' },
+                        { code: 'NG' as Country, name: 'Nigeria', flag: '🇳🇬', currency: 'NGN' },
+                      ].map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setCountry(c.code)}
+                          className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                            country === c.code
+                              ? 'border-emerald-500 bg-emerald-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <span className="text-2xl">{c.flag}</span>
+                          <div className="text-left">
+                            <p className="font-semibold text-gray-900">{c.name}</p>
+                            <p className="text-xs text-gray-500">{c.currency}</p>
+                          </div>
+                          {country === c.code && (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 ml-auto" />
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   {/* Phone (Optional) */}
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-900 mb-2">
                       Phone number <span className="font-normal text-gray-400">(optional)</span>
                     </label>
                     <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gray-700 font-medium border-r border-gray-200 pr-2 text-sm">
-                        <span>{isGhana ? '🇬🇭' : '🇳🇬'}</span>
-                        <span>{isGhana ? '+233' : '+234'}</span>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-500">
+                        <span className="text-sm">{country === 'GH' ? '🇬🇭 +233' : '🇳🇬 +234'}</span>
                       </div>
                       <input
                         id="phone"
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        placeholder={isGhana ? '24 123 4567' : '803 123 4567'}
-                        className="w-full pl-28 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
+                        placeholder={country === 'GH' ? '24 123 4567' : '801 234 5678'}
+                        disabled={isLoading}
+                        className="w-full pl-24 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all disabled:bg-gray-50"
                       />
                     </div>
                   </div>
@@ -389,68 +547,50 @@ export function RegisterPage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3.5 rounded-xl transition-all transform hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="animate-spin" size={20} />
-                        <span>Setting up...</span>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Setting up...
                       </>
                     ) : (
                       <>
-                        <span>Complete Setup</span>
-                        <CheckCircle2 className="w-4 h-4" />
+                        Launch My Business
+                        <ArrowRight className="w-5 h-5" />
                       </>
                     )}
                   </button>
                 </form>
               </>
             )}
-
-            {/* Step: Success */}
-            {step === 'success' && (
-              <div className="text-center">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  You're all set! 🎉
-                </h1>
-                <p className="text-gray-600 mb-6">
-                  Your business is ready. Redirecting to your dashboard...
-                </p>
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-600 mx-auto" />
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Right Side - Hero */}
-      <div className="hidden lg:flex w-[55%] bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-12 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-400 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative z-10 max-w-lg">
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Start your free trial today
+      {/* Right Side - Decorative (Desktop) */}
+      <div className="hidden lg:flex lg:w-[55%] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-12 items-center justify-center">
+        <div className="max-w-lg text-center">
+          <div className="mb-8">
+            <div className="w-24 h-24 mx-auto bg-white/10 backdrop-blur-sm rounded-3xl flex items-center justify-center mb-6">
+              <img src="/logo white.png" alt="" className="h-12 w-auto" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Start Your Business<br />Journey Today
           </h2>
           <p className="text-emerald-100 text-lg mb-8">
-            Join thousands of businesses across West Africa using WarehousePOS to grow their sales.
+            Join thousands of businesses using WarehousePOS to track sales and grow revenue.
           </p>
-
-          <div className="space-y-4">
+          <div className="space-y-4 text-left max-w-sm mx-auto">
             {[
-              '14-day free trial',
-              'No credit card required',
-              'Full access to all features',
-              'Cancel anytime',
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-3 text-white">
-                <CheckCircle2 className="w-5 h-5 text-yellow-400" />
-                <span>{feature}</span>
+              { icon: CheckCircle2, text: '14-day free trial' },
+              { icon: CheckCircle2, text: 'No credit card required' },
+              { icon: CheckCircle2, text: 'Cancel anytime' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-white">
+                <item.icon className="w-5 h-5 text-emerald-300" />
+                <span>{item.text}</span>
               </div>
             ))}
           </div>
@@ -459,3 +599,5 @@ export function RegisterPage() {
     </div>
   );
 }
+
+export default RegisterPage;

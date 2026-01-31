@@ -1,19 +1,52 @@
+/**
+ * Auth Store
+ * Central state management for authentication
+ * Works with the new auth-service
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Tenant, Store } from '@warehousepos/types';
 import { supabase } from '@/lib/supabase';
-import { getCurrentUser, signOut as authSignOut, onAuthStateChange } from '@/lib/supabase-auth';
-import { logger } from '@/lib/logger';
+import { getCurrentUser, signOut as authSignOut, onAuthStateChange } from '@/lib/auth-service';
 
-// Type for profile with relations
-interface UserProfile extends User {
-  tenant: Tenant;
-  store: Store;
+// Types
+interface UserProfile {
+  id: string;
+  auth_id: string;
+  full_name: string;
+  first_name?: string; // Computed from full_name for backwards compatibility
+  last_name?: string;  // Computed from full_name for backwards compatibility
+  email?: string;
+  phone?: string;
+  role: 'owner' | 'manager' | 'cashier';
+  tenant_id?: string;
+  store_id?: string;
+  is_active?: boolean;
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  country: 'GH' | 'NG';
+  currency: string;
+  subscription_status: string;
+  trial_ends_at?: string;
+  subscription_ends_at?: string;
+}
+
+interface Store {
+  id: string;
+  tenant_id: string;
+  name: string;
+  is_main: boolean;
+  address?: string;
+  phone?: string;
+  email?: string;
 }
 
 interface AuthState {
   // State
-  user: User | null;
+  user: UserProfile | null;
   tenant: Tenant | null;
   store: Store | null;
   isAuthenticated: boolean;
@@ -21,7 +54,7 @@ interface AuthState {
   isInitialized: boolean;
   
   // Actions
-  setUser: (user: User | null) => void;
+  setUser: (user: UserProfile | null) => void;
   setTenant: (tenant: Tenant | null) => void;
   setStore: (store: Store | null) => void;
   setLoading: (loading: boolean) => void;
@@ -30,6 +63,33 @@ interface AuthState {
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   refreshUser: () => Promise<void>;
+}
+
+// Helper function to process profile and add computed fields
+function processProfile(profile: any): UserProfile | null {
+  if (!profile) return null;
+  
+  // Split full_name into first_name and last_name
+  const fullName = profile.full_name || '';
+  const nameParts = fullName.trim().split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+  
+  return {
+    ...profile,
+    first_name: firstName,
+    last_name: lastName,
+  };
+}
+
+// Helper function to process tenant and add computed fields
+function processTenant(tenant: any): Tenant | null {
+  if (!tenant) return null;
+  
+  return {
+    ...tenant,
+    subscription_ends_at: tenant.subscription_ends_at || null,
+  };
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -42,13 +102,17 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
       isInitialized: false,
       
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      setTenant: (tenant) => set({ tenant }),
+      setUser: (user) => set({ user: user ? processProfile(user) : null, isAuthenticated: !!user }),
+      setTenant: (tenant) => set({ tenant: tenant ? processTenant(tenant) : null }),
       setStore: (store) => set({ store }),
       setLoading: (isLoading) => set({ isLoading }),
       
       signOut: async () => {
-        await authSignOut();
+        try {
+          await authSignOut();
+        } catch (err) {
+          console.error('Sign out error:', err);
+        }
         set({
           user: null,
           tenant: null,
@@ -59,18 +123,21 @@ export const useAuthStore = create<AuthState>()(
       
       refreshUser: async () => {
         try {
-          const result = await getCurrentUser();
+          const { profile } = await getCurrentUser();
           
-          if (result.success && result.user) {
+          if (profile) {
+            const processedProfile = processProfile(profile);
+            const processedTenant = processTenant((profile as any).tenant);
+            
             set({
-              user: result.user,
-              tenant: result.tenant,
-              store: result.store,
+              user: processedProfile,
+              tenant: processedTenant,
+              store: (profile as any).store as Store,
               isAuthenticated: true,
             });
           }
         } catch (error) {
-          logger.error('Failed to refresh user:', error);
+          console.error('Failed to refresh user:', error);
         }
       },
       
@@ -87,25 +154,37 @@ export const useAuthStore = create<AuthState>()(
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session?.user) {
-            // Fetch user profile with relations
-            const { data: profileData } = await supabase
+            // Fetch user profile with relations using auth_id
+            const { data: profileData, error } = await supabase
               .from('users')
               .select('*, tenant:tenants(*), store:stores(*)')
-              .eq('id', session.user.id)
-              .single();
+              .eq('auth_id', session.user.id)
+              .maybeSingle();
+            
+            if (error) {
+              console.error('Profile fetch error:', error);
+            }
             
             if (profileData) {
-              const userProfile = profileData as unknown as UserProfile;
+              const processedProfile = processProfile(profileData);
+              const processedTenant = processTenant((profileData as any).tenant);
+              
               set({
-                user: userProfile,
-                tenant: userProfile.tenant,
-                store: userProfile.store,
+                user: processedProfile,
+                tenant: processedTenant,
+                store: (profileData as any).store as Store,
                 isAuthenticated: true,
+              });
+            } else {
+              // User exists in auth but no profile - needs business setup
+              console.log('User has no profile yet (new user)');
+              set({
+                isAuthenticated: true, // They are authenticated
               });
             }
           }
         } catch (error) {
-          logger.error('Auth initialization error:', error);
+          console.error('Auth initialization error:', error);
         } finally {
           set({ isLoading: false, isInitialized: true });
         }
@@ -124,8 +203,8 @@ export const useAuthStore = create<AuthState>()(
 );
 
 // Listen to auth state changes
-onAuthStateChange(async (event, session) => {
-  logger.debug('Auth state changed:', event);
+const { data: { subscription } } = onAuthStateChange(async (event, session) => {
+  console.log('[AuthStore] Auth state changed:', event);
   
   if (event === 'SIGNED_IN' && session?.user) {
     // User signed in - try to refresh profile data
@@ -133,27 +212,27 @@ onAuthStateChange(async (event, session) => {
       const { data: profileData } = await supabase
         .from('users')
         .select('*, tenant:tenants(*), store:stores(*)')
-        .eq('id', session.user.id)
-        .single();
+        .eq('auth_id', session.user.id)
+        .maybeSingle();
       
       if (profileData) {
-        const userProfile = profileData as unknown as UserProfile;
         useAuthStore.setState({
-          user: userProfile,
-          tenant: userProfile.tenant,
-          store: userProfile.store,
+          user: profileData as UserProfile,
+          tenant: (profileData as any).tenant as Tenant,
+          store: (profileData as any).store as Store,
           isAuthenticated: true,
           isLoading: false,
         });
       } else {
         // User exists in auth but no profile yet - that's OK for new users
-        logger.debug('User signed in but no profile yet (new user)');
+        console.log('[AuthStore] User signed in but no profile yet (new user)');
         useAuthStore.setState({
+          isAuthenticated: true,
           isLoading: false,
         });
       }
     } catch (error) {
-      logger.error('Error fetching profile on sign in:', error);
+      console.error('[AuthStore] Error fetching profile on sign in:', error);
       useAuthStore.setState({
         isLoading: false,
       });
@@ -168,7 +247,15 @@ onAuthStateChange(async (event, session) => {
       isLoading: false,
     });
   } else if (event === 'TOKEN_REFRESHED') {
-    // Session refreshed - update if needed
-    logger.debug('Token refreshed');
+    // Session refreshed
+    console.log('[AuthStore] Token refreshed');
+  } else if (event === 'PASSWORD_RECOVERY') {
+    // User clicked password recovery link
+    console.log('[AuthStore] Password recovery event');
   }
 });
+
+// Export cleanup function
+export const cleanupAuthListener = () => {
+  subscription?.unsubscribe();
+};
