@@ -606,3 +606,125 @@ body {
 .ripple:active::after {
   opacity: 1;
 }
+/* ============================================
+   MOBILE PWA STYLES
+   ============================================ */
+
+/* Safe area padding utility */
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.safe-area-pt {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Slide Up Animation */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Scale In Animation */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Pull to Refresh Animation */
+@keyframes pullRefresh {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-pull-refresh {
+  animation: pullRefresh 1s linear infinite;
+}
+
+/* Bounce Animation for Buttons */
+@keyframes bounceIn {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-bounceIn {
+  animation: bounceIn 0.3s ease-out;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+
+/* Touch feedback */
+.touch-feedback {
+  @apply transition-transform duration-100 active:scale-95;
+}
+
+/* Prevent pull-to-refresh on touch */
+.no-pull-refresh {
+  overscroll-behavior-y: contain;
+}
+
+/* Mobile optimized scrolling */
+.scroll-smooth-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar but keep scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Glass morphism for mobile headers */
+.glass-header {
+  @apply backdrop-blur-xl bg-card/80;
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Bottom navigation shadow */
+.bottom-nav-shadow {
+  box-shadow: 0 -4px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Card press effect */
+.card-press {
+  @apply transition-all duration-150;
+}
+
+.card-press:active {
+  @apply scale-[0.98] brightness-95;
+}
