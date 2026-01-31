@@ -33,8 +33,6 @@ import {
   Receipt,
   ArrowLeft,
   RefreshCw,
-  Wifi,
-  WifiOff,
   ChevronRight,
 } from 'lucide-react';
 import { formatCurrency, cn } from '@warehousepos/utils';
@@ -713,77 +711,191 @@ export function MobilePOSPage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <header 
-        className="sticky top-0 z-40 px-4 py-3 shadow-sm"
-        style={{ backgroundColor: theme.primary }}
-      >
-        <div className="flex items-center gap-3">
-          {view !== 'products' ? (
-            <button
-              onClick={() => setView(view === 'checkout' ? 'cart' : 'products')}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
-            >
-              <ArrowLeft className="w-5 h-5" style={{ color: theme.text }} />
-            </button>
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <span className="text-lg">{theme.emoji}</span>
-            </div>
-          )}
-
-          <div className="flex-1">
-            <h1 className="text-lg font-bold" style={{ color: theme.text }}>
-              {view === 'products' ? 'Point of Sale' : view === 'cart' ? 'Cart' : 'Checkout'}
-            </h1>
-            <div className="flex items-center gap-2 text-xs" style={{ color: `${theme.text}99` }}>
-              {isOnline ? (
-                <>
-                  <Wifi className="w-3 h-3" />
-                  <span>Online</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3 h-3" />
-                  <span>Offline Mode</span>
-                </>
-              )}
-              <span>•</span>
-              <span>{store?.name}</span>
-            </div>
-          </div>
-
-          {view === 'products' && (
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
-            >
-              <RefreshCw 
-                className={cn('w-5 h-5', isRefreshing && 'animate-spin')} 
-                style={{ color: theme.text }} 
-              />
-            </button>
-          )}
+      {/* Enhanced Header */}
+      <header className="sticky top-0 z-40 overflow-hidden">
+        {/* Animated Gradient Background */}
+        <div 
+          className="absolute inset-0"
+          style={{ 
+            background: country === 'NG' 
+              ? 'linear-gradient(135deg, #008751 0%, #00A86B 50%, #006B41 100%)' 
+              : 'linear-gradient(135deg, #FFD000 0%, #FFEC80 50%, #D4A900 100%)'
+          }}
+        />
+        <div className="absolute inset-0 opacity-30">
+          <div 
+            className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl animate-pulse"
+            style={{ backgroundColor: theme.primaryLight }}
+          />
+          <div 
+            className="absolute -bottom-5 -left-5 w-32 h-32 rounded-full blur-2xl animate-pulse"
+            style={{ backgroundColor: theme.primaryDark, animationDelay: '1s' }}
+          />
         </div>
 
-        {/* Search Bar */}
-        {view === 'products' && (
-          <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-              className="w-full pl-10 pr-12 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
-              style={{ '--tw-ring-color': theme.primaryDark } as any}
-            />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
-              <Scan className="w-5 h-5 text-gray-500" />
-            </button>
+        {/* Header Content */}
+        <div className="relative px-4 pt-3 pb-4">
+          {/* Top Row: Back/Logo + Title + Actions */}
+          <div className="flex items-center gap-3">
+            {/* Left: Back Button or User Avatar */}
+            <AnimatePresence mode="wait">
+              {view !== 'products' ? (
+                <motion.button
+                  key="back"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  onClick={() => {
+                    haptic.light();
+                    setView(view === 'checkout' ? 'cart' : 'products');
+                  }}
+                  className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/10 active:scale-95 transition-transform"
+                >
+                  <ArrowLeft className="w-5 h-5" style={{ color: theme.text }} />
+                </motion.button>
+              ) : (
+                <motion.div
+                  key="avatar"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="w-11 h-11 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center border border-white/20 font-bold text-sm shadow-lg"
+                  style={{ color: theme.text }}
+                >
+                  {user?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || theme.emoji}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Center: Title & Status */}
+            <div className="flex-1 min-w-0">
+              <motion.h1 
+                key={view}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="text-lg font-bold tracking-tight truncate" 
+                style={{ color: theme.text }}
+              >
+                {view === 'products' ? 'Point of Sale' : view === 'cart' ? `Cart (${itemCount})` : 'Checkout'}
+              </motion.h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                {/* Online Status Badge */}
+                <motion.div 
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold',
+                    isOnline 
+                      ? 'bg-emerald-500/20 text-emerald-100' 
+                      : 'bg-red-500/20 text-red-100'
+                  )}
+                  animate={{ scale: isOnline ? 1 : [1, 1.05, 1] }}
+                  transition={{ repeat: isOnline ? 0 : Infinity, duration: 2 }}
+                >
+                  <span className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    isOnline ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'
+                  )} />
+                  {isOnline ? 'LIVE' : 'OFFLINE'}
+                </motion.div>
+                {/* Store Name */}
+                <span 
+                  className="text-[11px] font-medium truncate max-w-[120px]" 
+                  style={{ color: `${theme.text}B3` }}
+                >
+                  {store?.name}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
+              {view === 'products' && (
+                <>
+                  {/* Time Display */}
+                  <div 
+                    className="hidden xs:flex flex-col items-end text-right px-2"
+                    style={{ color: theme.text }}
+                  >
+                    <span className="text-xs font-bold">
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-[10px] opacity-70">
+                      {new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  {/* Refresh Button */}
+                  <motion.button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/10 disabled:opacity-50"
+                  >
+                    <motion.div
+                      animate={{ rotate: isRefreshing ? 360 : 0 }}
+                      transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: 'linear' }}
+                    >
+                      <RefreshCw className="w-5 h-5" style={{ color: theme.text }} />
+                    </motion.div>
+                  </motion.button>
+                </>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Search Bar - Products View Only */}
+          <AnimatePresence>
+            {view === 'products' && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search products, SKU, barcode..."
+                    className="w-full pl-11 pr-14 py-3.5 rounded-2xl bg-white/95 backdrop-blur-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 shadow-lg shadow-black/5 text-sm font-medium"
+                    style={{ '--tw-ring-color': theme.primaryDark } as any}
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {searchQuery && (
+                      <motion.button
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        onClick={() => setSearchQuery('')}
+                        className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 active:scale-95 transition-transform"
+                      >
+                        ×
+                      </motion.button>
+                    )}
+                    <button 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+                      style={{ backgroundColor: theme.primary }}
+                      onClick={() => {
+                        haptic.medium();
+                        toast.info('Scanner coming soon!');
+                      }}
+                    >
+                      <Scan className="w-5 h-5" style={{ color: theme.text }} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Subtle Bottom Border Glow */}
+        <div 
+          className="h-1 w-full"
+          style={{ 
+            background: `linear-gradient(90deg, transparent, ${theme.primaryLight}50, transparent)` 
+          }}
+        />
       </header>
 
       {/* Main Content */}
