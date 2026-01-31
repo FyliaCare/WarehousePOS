@@ -68,6 +68,7 @@ export interface Tenant {
   country: 'GH' | 'NG';
   currency: string;
   subscription_status: string;
+  business_type?: string;
 }
 
 export interface Store {
@@ -410,7 +411,7 @@ export async function handleAuthCallback(): Promise<{
 
     if (accessToken && refreshToken) {
       // Set the session from the tokens
-      const { data, error } = await supabase.auth.setSession({
+      const { error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       });

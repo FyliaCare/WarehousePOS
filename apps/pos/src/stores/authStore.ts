@@ -32,6 +32,7 @@ interface Tenant {
   subscription_status: string;
   trial_ends_at?: string;
   subscription_ends_at?: string;
+  business_type?: string;
 }
 
 interface Store {

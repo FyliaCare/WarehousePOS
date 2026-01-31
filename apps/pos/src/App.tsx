@@ -25,7 +25,7 @@ const AdaptiveReportsPage = lazy(() => import('@/pages/reports/AdaptiveReportsPa
 
 // Lazy load POS pages for better code splitting
 const POSPage = lazy(() => import('@/pages/POSPage').then(m => ({ default: m.POSPage })));
-const MobilePOSPage = lazy(() => import('@/pages/pos/MobilePOSPage'));
+const MobilePOSPage = lazy(() => import('@/pages/pos/MobilePOSPage').then(m => ({ default: m.MobilePOSPage })));
 const AdaptivePOSPage = lazy(() => import('@/pages/pos/AdaptivePOSPage'));
 const MobileProductsPage = lazy(() => import('@/pages/products/MobileProductsPage'));
 const AdaptiveProductsPage = lazy(() => import('@/pages/products/AdaptiveProductsPage'));
@@ -38,7 +38,7 @@ const AdaptiveCustomersPage = lazy(() => import('@/pages/customers/AdaptiveCusto
 const MobileSalesPage = lazy(() => import('@/pages/sales/MobileSalesPage'));
 const AdaptiveSalesPage = lazy(() => import('@/pages/sales/AdaptiveSalesPage'));
 const AdaptiveDeliveriesPage = lazy(() => import('@/pages/delivery/AdaptiveDeliveriesPage'));
-const AdaptiveRidersPage = lazy(() => import('@/pages/riders/AdaptiveRidersPage'));
+const AdaptiveRidersPage = lazy(() => import('@/pages/riders/AdaptiveRidersPage').then(m => ({ default: m.AdaptiveRidersPage })));
 const AdaptiveAdvancedSettingsPage = lazy(() => import('@/pages/settings/AdaptiveAdvancedSettingsPage'));
 const AdaptiveSettingsPage = lazy(() => import('@/pages/settings/AdaptiveSettingsPage'));
 
