@@ -118,6 +118,9 @@ export interface Tenant extends BaseEntity, SoftDeletable {
   phone_country_code: string;
   default_tax_rate: number;
   
+  // Business type (from business-categories)
+  business_type?: string;
+  
   // Contact
   email?: string;
   phone?: string;
@@ -216,6 +219,7 @@ export interface User extends BaseEntity, SoftDeletable {
 
 export interface Category extends BaseEntity, SoftDeletable {
   tenant_id: string;
+  store_id?: string;
   name: string;
   description?: string;
   image_url?: string;
@@ -224,6 +228,8 @@ export interface Category extends BaseEntity, SoftDeletable {
   parent_id?: string;
   sort_order: number;
   is_active: boolean;
+  /** Business type for this category - determines custom product fields */
+  business_type?: string;
 }
 
 // ==========================================

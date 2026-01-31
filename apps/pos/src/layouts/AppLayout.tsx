@@ -256,19 +256,11 @@ export function AppLayout() {
 
       {/* Main content */}
       <div className="lg:pl-72">
-        {/* Top bar */}
-        <header className={cn(
-          'sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-4 lg:px-6',
-          isGhana ? 'bg-gradient-ghana' : 'bg-gradient-nigeria'
-        )}>
+        {/* Top bar - Blue theme header */}
+        <header className="sticky top-0 z-30 h-16 bg-[#1e5f9e] backdrop-blur-xl border-b border-[#14466e] flex items-center justify-between px-4 lg:px-6 shadow-md">
           {/* Mobile menu button */}
           <button
-            className={cn(
-              'lg:hidden p-2.5 rounded-xl transition-colors',
-              isGhana 
-                ? 'text-ghana-gold-600 hover:bg-ghana-gold-100 dark:text-ghana-gold-400 dark:hover:bg-ghana-gold-500/20' 
-                : 'text-nigeria-green-600 hover:bg-nigeria-green-100 dark:text-nigeria-green-400 dark:hover:bg-nigeria-green-500/20'
-            )}
+            className="lg:hidden p-2.5 rounded-xl transition-colors text-white/90 hover:bg-white/10"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-6 h-6" />
@@ -280,44 +272,28 @@ export function AppLayout() {
           {/* Right side */}
           <div className="flex items-center gap-3">
             {/* Notifications */}
-            <button className={cn(
-              'relative p-2.5 rounded-xl transition-colors',
-              isGhana 
-                ? 'text-muted-foreground hover:text-ghana-gold-600 hover:bg-ghana-gold-50 dark:hover:bg-ghana-gold-500/10' 
-                : 'text-muted-foreground hover:text-nigeria-green-600 hover:bg-nigeria-green-50 dark:hover:bg-nigeria-green-500/10'
-            )}>
+            <button className="relative p-2.5 rounded-xl transition-colors text-white/80 hover:text-white hover:bg-white/10">
               <Bell className="w-5 h-5" />
-              <span className={cn(
-                'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full border-2 border-card',
-                isGhana ? 'bg-ghana-gold-500' : 'bg-nigeria-green-500'
-              )} />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full border-2 border-[#1e5f9e] bg-amber-400" />
             </button>
 
             {/* User menu */}
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className={cn(
-                  'flex items-center gap-3 p-2 rounded-xl transition-all duration-200',
-                  isGhana 
-                    ? 'hover:bg-ghana-gold-50 dark:hover:bg-ghana-gold-500/10' 
-                    : 'hover:bg-nigeria-green-50 dark:hover:bg-nigeria-green-500/10'
-                )}
+                className="flex items-center gap-3 p-2 rounded-xl transition-all duration-200 hover:bg-white/10"
               >
                 <Avatar
                   name={user?.full_name || 'User'}
                   size="sm"
                 />
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-white">
                     {user?.full_name}
                   </p>
-                  <p className={cn(
-                    'text-xs capitalize',
-                    isGhana ? 'text-ghana-gold-600 dark:text-ghana-gold-400' : 'text-nigeria-green-600 dark:text-nigeria-green-400'
-                  )}>{user?.role}</p>
+                  <p className="text-xs capitalize text-white/70">{user?.role}</p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground hidden md:block" />
+                <ChevronDown className="w-4 h-4 text-white/70 hidden md:block" />
               </button>
 
               {/* Dropdown */}

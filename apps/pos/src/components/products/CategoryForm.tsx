@@ -1,10 +1,17 @@
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Layers, Palette, Smile, ToggleLeft, Eye } from 'lucide-react';
+import { Loader2, Layers, Palette, Smile, ToggleLeft, Eye, Sparkles, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Category, CountryCode } from '@warehousepos/types';
+import { 
+  getBusinessCategory, 
+  ALL_BUSINESS_CATEGORIES,
+  type DefaultCategory,
+  type IndustrySector 
+} from '../../../../../packages/shared/src/data/business-categories';
 
 interface CategoryFormProps {
   category?: Category | null;
@@ -17,6 +24,7 @@ interface CategoryFormData {
   color: string;
   icon: string;
   isActive: boolean;
+  businessType: string;
 }
 
 // Theme configuration
@@ -60,6 +68,25 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
   const isEditing = !!category;
   const country: CountryCode = tenant?.country === 'NG' ? 'NG' : 'GH';
   const theme = themes[country];
+  const [showSuggestions, setShowSuggestions] = useState(!isEditing);
+  const [showBusinessTypes, setShowBusinessTypes] = useState(false);
+
+  // Get suggested categories based on selected business type (or tenant's default)
+  const [selectedBusinessType, setSelectedBusinessType] = useState<string>(
+    (category as any)?.business_type || tenant?.business_type || ''
+  );
+  
+  const suggestedCategories = useMemo<DefaultCategory[]>(() => {
+    if (!selectedBusinessType) return [];
+    const businessCategory = getBusinessCategory(selectedBusinessType);
+    return businessCategory?.defaultCategories ?? [];
+  }, [selectedBusinessType]);
+
+  // Get selected business category info for display
+  const selectedBusinessInfo = useMemo(() => {
+    if (!selectedBusinessType) return null;
+    return getBusinessCategory(selectedBusinessType);
+  }, [selectedBusinessType]);
 
   const {
     register,
@@ -75,6 +102,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           color: category.color || '#6366f1',
           icon: category.icon || '📦',
           isActive: category.is_active,
+          businessType: (category as any).business_type || tenant?.business_type || '',
         }
       : {
           name: '',
@@ -82,6 +110,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           color: '#6366f1',
           icon: '📦',
           isActive: true,
+          businessType: tenant?.business_type || '',
         },
   });
 
@@ -101,6 +130,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
             color: data.color,
             icon: data.icon,
             is_active: data.isActive,
+            business_type: data.businessType || null,
           } as never)
           .eq('id', category.id);
         if (error) throw error;
@@ -122,6 +152,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           icon: data.icon,
           is_active: data.isActive,
           sort_order: sortOrder,
+          business_type: data.businessType || null,
         } as never);
         if (error) throw error;
       }
@@ -142,6 +173,169 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* Business Type Selector - For Multi-Industry Support */}
+      <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
+        <button
+          type="button"
+          onClick={() => setShowBusinessTypes(!showBusinessTypes)}
+          className="w-full flex items-center justify-between"
+        >
+          <label className="flex items-center gap-2 text-sm font-semibold" style={{ color: theme.textOnLight }}>
+            <Building2 className="w-4 h-4" style={{ color: theme.accent }} />
+            Business Type
+            <span className="text-xs font-normal text-zinc-500">(for custom product fields)</span>
+          </label>
+          {showBusinessTypes ? (
+            <ChevronUp className="w-4 h-4" style={{ color: theme.accent }} />
+          ) : (
+            <ChevronDown className="w-4 h-4" style={{ color: theme.accent }} />
+          )}
+        </button>
+        
+        {/* Current Selection */}
+        <div className="mt-3 flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: theme.primaryLight }}>
+          {selectedBusinessInfo ? (
+            <>
+              <span className="text-2xl">{selectedBusinessInfo.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-zinc-900 truncate">{selectedBusinessInfo.name}</p>
+                <p className="text-xs text-zinc-500">{selectedBusinessInfo.productFields.length} custom product fields</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl">📦</span>
+              <div className="flex-1">
+                <p className="font-medium text-sm text-zinc-900">Default (No custom fields)</p>
+                <p className="text-xs text-zinc-500">Select a type for specialized product fields</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Business Types Dropdown */}
+        {showBusinessTypes && (
+          <div className="mt-3 max-h-60 overflow-y-auto rounded-lg border" style={{ borderColor: theme.primaryMid }}>
+            {/* Default option */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedBusinessType('');
+                setValue('businessType', '');
+                setShowBusinessTypes(false);
+              }}
+              className="w-full flex items-center gap-3 p-3 text-left hover:bg-zinc-50 transition-colors border-b"
+              style={{ borderColor: theme.primaryMid }}
+            >
+              <span className="text-xl">📦</span>
+              <div>
+                <p className="font-medium text-sm text-zinc-900">Default</p>
+                <p className="text-xs text-zinc-500">No specialized product fields</p>
+              </div>
+            </button>
+
+            {/* Business Categories by Sector */}
+            {Object.entries(
+              ALL_BUSINESS_CATEGORIES.reduce((acc, cat) => {
+                const sector = cat.sector;
+                if (!acc[sector]) acc[sector] = [];
+                acc[sector].push(cat);
+                return acc;
+              }, {} as Record<IndustrySector, typeof ALL_BUSINESS_CATEGORIES>)
+            ).map(([sector, cats]) => (
+              <div key={sector}>
+                <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider bg-zinc-100 text-zinc-500 sticky top-0">
+                  {sector.replace(/_/g, ' ')}
+                </div>
+                {cats.map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedBusinessType(cat.id);
+                      setValue('businessType', cat.id);
+                      setShowBusinessTypes(false);
+                      // Also update suggested categories display
+                    }}
+                    className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${
+                      selectedBusinessType === cat.id 
+                        ? '' 
+                        : 'hover:bg-zinc-50'
+                    }`}
+                    style={selectedBusinessType === cat.id ? { backgroundColor: theme.primaryLight } : {}}
+                  >
+                    <span className="text-xl">{cat.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-zinc-900 truncate">{cat.name}</p>
+                      <p className="text-xs text-zinc-500">{cat.productFields.length} fields</p>
+                    </div>
+                    {selectedBusinessType === cat.id && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: theme.primary, color: theme.textOnPrimary }}>
+                        Selected
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <input type="hidden" {...register('businessType')} />
+      </div>
+
+      {/* Suggested Categories (only when creating new) */}
+      {!isEditing && suggestedCategories.length > 0 && (
+        <div className="p-4 rounded-xl border-2 border-dashed" style={{ borderColor: theme.primaryMid, backgroundColor: theme.primaryLight }}>
+          <button
+            type="button"
+            onClick={() => setShowSuggestions(!showSuggestions)}
+            className="w-full flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" style={{ color: theme.accent }} />
+              <span className="text-sm font-semibold" style={{ color: theme.textOnLight }}>
+                Suggested Categories for Your Business
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/80" style={{ color: theme.accent }}>
+                {suggestedCategories.length}
+              </span>
+            </div>
+            {showSuggestions ? (
+              <ChevronUp className="w-4 h-4" style={{ color: theme.accent }} />
+            ) : (
+              <ChevronDown className="w-4 h-4" style={{ color: theme.accent }} />
+            )}
+          </button>
+          
+          {showSuggestions && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {suggestedCategories.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    setValue('name', suggestion.name);
+                    setValue('icon', suggestion.icon);
+                    if (suggestion.description) {
+                      setValue('description', suggestion.description);
+                    }
+                    setShowSuggestions(false);
+                  }}
+                  className="flex items-center gap-2 p-2.5 rounded-lg bg-white border border-transparent hover:border-current transition-all text-left group"
+                  style={{ '--tw-border-color': theme.primary } as React.CSSProperties}
+                >
+                  <span className="text-xl shrink-0">{suggestion.icon}</span>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 truncate">
+                    {suggestion.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Category Name */}
       <div className="p-4 rounded-xl border" style={{ borderColor: theme.primaryMid, backgroundColor: 'white' }}>
         <label className="flex items-center gap-2 text-sm font-semibold mb-3" style={{ color: theme.textOnLight }}>

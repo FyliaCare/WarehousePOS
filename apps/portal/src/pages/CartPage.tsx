@@ -59,7 +59,7 @@ export function CartPage() {
                     </h3>
                   </Link>
                   <p className="text-lg font-bold text-primary mt-1">
-                    {formatCurrency(item.product.selling_price, currency)}
+                    {formatCurrency(item.product.selling_price ?? 0, currency)}
                   </p>
                 </div>
 
@@ -88,7 +88,7 @@ export function CartPage() {
                   </div>
 
                   <p className="text-sm font-medium text-foreground">
-                    {formatCurrency(item.product.selling_price * item.quantity, currency)}
+                    {formatCurrency((item.product.selling_price ?? 0) * item.quantity, currency)}
                   </p>
                 </div>
               </div>

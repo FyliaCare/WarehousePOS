@@ -106,7 +106,7 @@ export function ProductDetailPage() {
           </Badge>
           <h1 className="text-3xl font-bold text-foreground mb-2">{product.name}</h1>
           <p className="text-2xl font-bold text-primary mb-4">
-            {formatCurrency(product.selling_price, currency)}
+            {formatCurrency(product.selling_price ?? 0, currency)}
           </p>
 
           {product.description && (
@@ -154,7 +154,7 @@ export function ProductDetailPage() {
             disabled={product.track_stock && (product.stock_quantity ?? 0) <= 0}
           >
             <ShoppingCart className="w-5 h-5" />
-            Add to Cart - {formatCurrency(product.selling_price * quantity, currency)}
+            Add to Cart - {formatCurrency((product.selling_price ?? 0) * quantity, currency)}
           </Button>
 
           {/* SKU & Barcode */}

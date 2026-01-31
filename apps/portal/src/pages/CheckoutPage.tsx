@@ -110,9 +110,9 @@ export function CheckoutPage() {
         product_id: item.product.id,
         product_name: item.product.name,
         quantity: item.quantity,
-        unit_price: item.product.selling_price,
+        unit_price: item.product.selling_price ?? 0,
         discount: 0,
-        total: item.product.selling_price * item.quantity,
+        total: (item.product.selling_price ?? 0) * item.quantity,
       }));
 
       const { error: itemsError } = await supabase
@@ -317,7 +317,7 @@ export function CheckoutPage() {
                       {item.product.name} × {item.quantity}
                     </span>
                     <span className="text-foreground">
-                      {formatCurrency(item.product.selling_price * item.quantity, currency)}
+                      {formatCurrency((item.product.selling_price ?? 0) * item.quantity, currency)}
                     </span>
                   </div>
                 ))}

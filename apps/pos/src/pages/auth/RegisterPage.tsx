@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, ArrowLeft, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Building2, UserCircle2, Mail, Phone, Rocket, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowLeft, TrendingUp, Users, ShoppingBag, Zap, CheckCircle2, Star, Building2, UserCircle2, Mail, Phone, Rocket, RefreshCw, Briefcase, ChevronDown, Search } from 'lucide-react';
 import { sendOTP, verifyOTP, createUserProfile, formatPhone } from '@/lib/supabase-auth';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import type { CountryCode } from '@warehousepos/types';
+import { ALL_BUSINESS_CATEGORIES, type IndustrySector } from '../../../../../packages/shared/src/data/business-categories';
 
 type Step = 'country' | 'phone' | 'otp' | 'details' | 'success';
 
@@ -25,9 +26,27 @@ export function RegisterPage() {
   const [businessName, setBusinessName] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [showBusinessTypes, setShowBusinessTypes] = useState(false);
+  const [businessTypeSearch, setBusinessTypeSearch] = useState('');
   
   // Temp auth user ID (before profile is created)
   const [tempAuthUserId, setTempAuthUserId] = useState<string | null>(null);
+  
+  // Filtered business types based on search
+  const filteredBusinessTypes = useMemo(() => {
+    if (!businessTypeSearch.trim()) return ALL_BUSINESS_CATEGORIES;
+    const search = businessTypeSearch.toLowerCase();
+    return ALL_BUSINESS_CATEGORIES.filter(cat => 
+      cat.name.toLowerCase().includes(search) ||
+      cat.sector.replace(/_/g, ' ').toLowerCase().includes(search)
+    );
+  }, [businessTypeSearch]);
+  
+  // Get selected business info
+  const selectedBusinessInfo = useMemo(() => {
+    return ALL_BUSINESS_CATEGORIES.find(cat => cat.id === businessType);
+  }, [businessType]);
   
   const steps: Step[] = ['country', 'phone', 'otp', 'details'];
   const currentStepIndex = steps.indexOf(step);
@@ -154,7 +173,7 @@ export function RegisterPage() {
       return;
     }
     
-    logger.debug('Creating user profile...', { tempAuthUserId, businessName, fullName, phone, country });
+    logger.debug('Creating user profile...', { tempAuthUserId, businessName, fullName, phone, country, businessType });
     setIsLoading(true);
     try {
       const result = await createUserProfile({
@@ -164,6 +183,7 @@ export function RegisterPage() {
         businessName: businessName.trim(),
         fullName: fullName.trim(),
         email: email.trim() || undefined,
+        businessType: businessType || undefined,
       });
       
       logger.debug('Create profile result:', result);
@@ -493,6 +513,107 @@ export function RegisterPage() {
                         className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-900 placeholder-gray-400"
                       />
                     </div>
+                  </div>
+
+                  {/* Business Type Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                      Type of business <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowBusinessTypes(!showBusinessTypes)}
+                        className="w-full pl-11 pr-10 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl text-left focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                      >
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                          <Briefcase className="w-5 h-5" />
+                        </div>
+                        {selectedBusinessInfo ? (
+                          <span className="flex items-center gap-2 text-gray-900">
+                            <span className="text-lg">{selectedBusinessInfo.emoji}</span>
+                            {selectedBusinessInfo.name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Select your business type...</span>
+                        )}
+                        <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform ${showBusinessTypes ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {/* Business Types Dropdown */}
+                      {showBusinessTypes && (
+                        <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-80 overflow-hidden">
+                          {/* Search */}
+                          <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <input
+                                type="text"
+                                value={businessTypeSearch}
+                                onChange={(e) => setBusinessTypeSearch(e.target.value)}
+                                placeholder="Search business types..."
+                                className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                                autoFocus
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Options */}
+                          <div className="overflow-y-auto max-h-60">
+                            {/* Skip option */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBusinessType('');
+                                setShowBusinessTypes(false);
+                                setBusinessTypeSearch('');
+                              }}
+                              className="w-full px-4 py-3 text-left text-gray-500 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                            >
+                              Skip for now
+                            </button>
+                            
+                            {/* Grouped by sector */}
+                            {Object.entries(
+                              filteredBusinessTypes.reduce((acc, cat) => {
+                                const sector = cat.sector;
+                                if (!acc[sector]) acc[sector] = [];
+                                acc[sector].push(cat);
+                                return acc;
+                              }, {} as Record<IndustrySector, typeof ALL_BUSINESS_CATEGORIES>)
+                            ).map(([sector, cats]) => (
+                              <div key={sector}>
+                                <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-gray-50 text-gray-500 sticky top-0">
+                                  {sector.replace(/_/g, ' ')}
+                                </div>
+                                {cats.map((cat) => (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setBusinessType(cat.id);
+                                      setShowBusinessTypes(false);
+                                      setBusinessTypeSearch('');
+                                    }}
+                                    className={`w-full px-4 py-3 text-left flex items-center gap-3 transition-colors ${
+                                      businessType === cat.id
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : 'hover:bg-gray-50 text-gray-700'
+                                    }`}
+                                  >
+                                    <span className="text-lg">{cat.emoji}</span>
+                                    <span className="font-medium">{cat.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-xs text-gray-500">
+                      This helps us customize your experience. You can sell multiple types of products!
+                    </p>
                   </div>
 
                   <div>

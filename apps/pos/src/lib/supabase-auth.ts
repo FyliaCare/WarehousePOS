@@ -290,11 +290,12 @@ export async function createUserProfile(params: {
   businessName: string;
   fullName: string;
   email?: string;
+  businessType?: string;
 }): Promise<RegisterResult> {
-  const { userId, phone, country, businessName, fullName, email } = params;
+  const { userId, phone, country, businessName, fullName, email, businessType } = params;
   const formattedPhone = formatPhone(phone, country);
   
-  console.log('createUserProfile (optimized) called with:', { userId, businessName, fullName });
+  console.log('createUserProfile (optimized) called with:', { userId, businessName, fullName, businessType });
   const startTime = Date.now();
   
   try {
@@ -319,11 +320,12 @@ export async function createUserProfile(params: {
       
       // Parallel updates for speed
       const [tenantResult, userResult] = await Promise.all([
-        // Update tenant name
+        // Update tenant name and business_type
         supabase.from('tenants').update({ 
           name: businessName,
           country,
           currency: country === 'GH' ? 'GHS' : 'NGN',
+          business_type: businessType || null,
         }).eq('id', tenantId),
         
         // Update user profile
@@ -370,6 +372,7 @@ export async function createUserProfile(params: {
         currency: country === 'GH' ? 'GHS' : 'NGN',
         subscription_status: 'trial' as const,
         trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        business_type: businessType || null,
       } as any)
       .select()
       .single();

@@ -2,7 +2,7 @@
   "name": "WarehousePOS",
   "short_name": "WarehousePOS",
   "description": "Africa's most powerful point-of-sale system for retail businesses",
-  "start_url": "/",
+  "start_url": "/mobile-pos",
   "display": "standalone",
   "background_color": "#030712",
   "theme_color": "#D4AF37",
@@ -42,16 +42,32 @@
   ],
   "shortcuts": [
     {
-      "name": "New Sale",
+      "name": "Quick Sale",
       "short_name": "Sale",
       "description": "Start a new sale",
-      "url": "/pos"
+      "url": "/mobile-pos",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
-      "name": "Inventory",
-      "short_name": "Stock",
-      "description": "Check inventory",
-      "url": "/inventory"
+      "name": "Full POS",
+      "short_name": "POS",
+      "description": "Full point of sale interface",
+      "url": "/pos",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "View dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Products",
+      "short_name": "Products",
+      "description": "Manage products",
+      "url": "/products",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],
   "related_applications": [],

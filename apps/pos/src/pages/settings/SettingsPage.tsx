@@ -10,6 +10,7 @@ import {
   Sun,
   Monitor,
   MapPin,
+  Briefcase,
 } from 'lucide-react';
 import { Button, Card, Input, Switch } from '@warehousepos/ui';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -18,9 +19,11 @@ import { toast } from 'sonner';
 import { cn } from '@warehousepos/utils';
 import { supabase } from '@/lib/supabase';
 import { StoreLocationPicker, type StoreLocation } from '@/components/maps';
+import { BusinessCategoryPicker } from '@/components/settings';
+import { getBusinessCategory } from '../../../../../packages/shared/src/data/business-categories';
 import type { CountryCode } from '@warehousepos/types';
 
-type SettingsTab = 'profile' | 'store' | 'pos' | 'notifications' | 'appearance' | 'billing';
+type SettingsTab = 'profile' | 'store' | 'business' | 'pos' | 'notifications' | 'appearance' | 'billing';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -30,6 +33,7 @@ export function SettingsPage() {
   const tabs = [
     { id: 'profile' as const, label: 'Profile', icon: User },
     { id: 'store' as const, label: 'Store', icon: Store },
+    { id: 'business' as const, label: 'Business Type', icon: Briefcase },
     { id: 'pos' as const, label: 'POS Settings', icon: Receipt },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
@@ -102,6 +106,10 @@ export function SettingsPage() {
 
           {activeTab === 'store' && (
             <StoreSettingsTab store={store} tenant={tenant} />
+          )}
+
+          {activeTab === 'business' && (
+            <BusinessTypeTab tenant={tenant} />
           )}
 
           {activeTab === 'pos' && (
@@ -440,6 +448,107 @@ function StoreSettingsTab({ store, tenant }: { store: any; tenant: any }) {
           {isSaving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Business Type Tab Component
+function BusinessTypeTab({ tenant }: { tenant: any }) {
+  const { refreshUser } = useAuthStore();
+  const [selectedBusinessType, setSelectedBusinessType] = useState<string>(
+    tenant?.business_type || ''
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Get current business category info
+  const currentCategory = tenant?.business_type 
+    ? getBusinessCategory(tenant.business_type) 
+    : null;
+
+  const handleSave = async () => {
+    if (!tenant?.id || !selectedBusinessType) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({
+          business_type: selectedBusinessType,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tenant.id);
+
+      if (error) throw error;
+      
+      // Refresh user data to get updated tenant
+      await refreshUser();
+      
+      toast.success('Business type updated!', {
+        description: 'Your product forms will now show relevant fields for your business.'
+      });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update business type');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hasChanged = selectedBusinessType !== (tenant?.business_type || '');
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-2">Business Type</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Select your business type to get customized categories and product fields. 
+          This helps tailor the POS experience to your specific needs.
+        </p>
+
+        {/* Current Selection */}
+        {currentCategory && !hasChanged && (
+          <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{currentCategory.emoji}</span>
+              <div>
+                <p className="font-semibold text-foreground">{currentCategory.name}</p>
+                <p className="text-sm text-muted-foreground">{currentCategory.description}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {currentCategory.tags.slice(0, 5).map(tag => (
+                <span 
+                  key={tag}
+                  className="px-2 py-0.5 text-xs rounded-full bg-background text-muted-foreground"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <BusinessCategoryPicker
+          value={selectedBusinessType}
+          onChange={setSelectedBusinessType}
+          showSearch={true}
+          showSectorGroups={true}
+        />
+      </Card>
+
+      {/* Save Button */}
+      {hasChanged && (
+        <div className="flex justify-end gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setSelectedBusinessType(tenant?.business_type || '')}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Business Type'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

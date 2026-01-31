@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { PWAInstallPrompt, OfflineIndicator } from '@/components/PWAInstallPrompt';
+import { Loader2 } from 'lucide-react';
 
 // Layouts
 import { AuthLayout } from '@/layouts/AuthLayout';
@@ -10,7 +12,6 @@ import { AppLayout } from '@/layouts/AppLayout';
 import { LoginPage, RegisterPage } from '@/pages/auth';
 import { CountrySelectPage } from '@/pages/auth/CountrySelectPage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { POSPage } from '@/pages/NewPOSPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
 import { CategoriesPage } from '@/pages/products/CategoriesPage';
 import { StockPage } from '@/pages/inventory/StockPage';
@@ -21,10 +22,24 @@ import DeliveriesPage from '@/pages/DeliveriesPage';
 import RidersPage from '@/pages/RidersPage';
 import ReportsPage from '@/pages/ReportsPage';
 
+// Lazy load POS pages for better code splitting
+const POSPage = lazy(() => import('@/pages/POSPage').then(m => ({ default: m.POSPage })));
+const MobilePOSPage = lazy(() => import('@/pages/pos/MobilePOSPage'));
+const AdaptivePOSPage = lazy(() => import('@/pages/pos/AdaptivePOSPage'));
+
 // Delivery Management
 import DeliveryZonesPage from '@/pages/delivery/DeliveryZonesPage';
 import DeliveryAssignmentsPage from '@/pages/delivery/DeliveryAssignmentsPage';
 import TrackingPage from '@/pages/tracking/TrackingPage';
+
+// Loading fallback for lazy components
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -94,12 +109,14 @@ function App() {
           />
         </Route>
 
-        {/* POS - Full screen layout (no sidebar) */}
+        {/* Mobile POS - Full screen without sidebar for PWA mode */}
         <Route
-          path="/pos"
+          path="/mobile-pos"
           element={
             <ProtectedRoute>
-              <POSPage />
+              <Suspense fallback={<PageLoading />}>
+                <MobilePOSPage />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -117,6 +134,8 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/pos" element={<Suspense fallback={<PageLoading />}><AdaptivePOSPage /></Suspense>} />
+          <Route path="/pos/desktop" element={<Suspense fallback={<PageLoading />}><POSPage /></Suspense>} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/stock" element={<StockPage />} />

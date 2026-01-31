@@ -19,12 +19,14 @@ import {
   ChevronDown,
   Tag,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Product, Category, CountryCode, Currency } from '@warehousepos/types';
-import { ProductFormSimple } from '@/components/products/ProductFormSimple';
+import SmartProductForm from '@/components/products/SmartProductForm';
+import QuickAddFAB from '@/components/products/QuickAddFAB';
 
 export function ProductsPage() {
   const { tenant, store } = useAuthStore();
@@ -181,13 +183,13 @@ export function ProductsPage() {
               </button>
               <button 
                 onClick={() => setIsFormOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg"
+                className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg"
                 style={{ 
                   backgroundColor: isNigeria ? '#FFFFFF' : '#1A1400',
                   color: isNigeria ? theme.primary : '#FFD000'
                 }}
               >
-                <Plus className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
                 Add Product
               </button>
             </div>
@@ -598,12 +600,13 @@ export function ProductsPage() {
             
             {/* Panel Content */}
             <div className="overflow-y-auto h-[calc(100%-80px)] p-6">
-              <ProductFormSimple
+              <SmartProductForm
                 product={editingProduct}
                 categories={categories || []}
                 currency={currency}
                 onSuccess={handleFormClose}
                 onCancel={handleFormClose}
+                initialMode={editingProduct ? 'full' : 'quick'}
               />
             </div>
           </div>
@@ -621,6 +624,15 @@ export function ProductsPage() {
           `}</style>
         </>
       )}
+
+      {/* Mobile Quick Add FAB */}
+      <QuickAddFAB
+        categories={categories || []}
+        currency={currency}
+        onProductAdded={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
+        brandColor={theme.primary}
+        brandTextColor={theme.text}
+      />
     </div>
   );
 }

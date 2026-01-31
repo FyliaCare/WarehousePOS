@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Loader2, Package, DollarSign, Hash, Barcode, Archive, 
-  ChevronDown, ChevronUp, Image, FileText, Tag
+  ChevronDown, ChevronUp, Image, FileText, Tag, Sparkles
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Product, Category, Currency } from '@warehousepos/types';
 import { cn } from '@warehousepos/utils';
+import { DynamicProductFields, useBusinessProductFields } from './DynamicProductFields';
+import { getBusinessCategory } from '../../../../../packages/shared/src/data/business-categories';
 
 interface ProductFormSimpleProps {
   product?: Product | null;
@@ -48,6 +50,17 @@ export function ProductFormSimple({ product, categories, currency, onSuccess, on
   const queryClient = useQueryClient();
   const isEditing = !!product;
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showBusinessFields, setShowBusinessFields] = useState(true);
+
+  // Get business-specific fields
+  const businessFields = useBusinessProductFields();
+  const hasBusinessFields = businessFields.length > 0;
+  
+  // Get business category info
+  const businessCategory = useMemo(() => {
+    if (!tenant?.business_type) return null;
+    return getBusinessCategory(tenant.business_type);
+  }, [tenant?.business_type]);
 
   // Theme based on country
   const isNigeria = tenant?.country === 'NG';
@@ -380,6 +393,45 @@ export function ProductFormSimple({ product, categories, currency, onSuccess, on
           />
         </label>
       </div>
+
+      {/* Business-Specific Fields */}
+      {hasBusinessFields && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowBusinessFields(!showBusinessFields)}
+            className="w-full flex items-center justify-between py-3 px-4 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
+            style={{ 
+              borderColor: brandColorMid, 
+              backgroundColor: brandColorLight,
+              color: brandText 
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" style={{ color: brandColor }} />
+              {businessCategory?.name} Details
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/80">
+                {businessFields.length} fields
+              </span>
+            </span>
+            {showBusinessFields ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showBusinessFields && (
+            <div className="p-4 rounded-xl border" style={{ borderColor: brandColorMid, backgroundColor: 'white' }}>
+              <p className="text-xs text-gray-500 mb-4">
+                These fields are specific to your {businessCategory?.name?.toLowerCase()} business
+              </p>
+              <DynamicProductFields
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors as any}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {/* Advanced Options Toggle */}
       <button
