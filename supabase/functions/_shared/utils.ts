@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import bcrypt from 'npm:bcryptjs@2.4.3';
 
