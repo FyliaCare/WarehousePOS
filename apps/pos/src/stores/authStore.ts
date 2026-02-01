@@ -11,7 +11,7 @@ import { getCurrentUser, signOut as authSignOut, onAuthStateChange } from '@/lib
 // Types
 interface UserProfile {
   id: string;
-  auth_id: string;
+  auth_id?: string;
   full_name: string;
   first_name?: string; // Computed from full_name for backwards compatibility
   last_name?: string;  // Computed from full_name for backwards compatibility
@@ -53,12 +53,14 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean;
+  needsProfileSetup: boolean;
   
   // Actions
   setUser: (user: UserProfile | null) => void;
   setTenant: (tenant: Tenant | null) => void;
   setStore: (store: Store | null) => void;
   setLoading: (loading: boolean) => void;
+  setNeedsProfileSetup: (needs: boolean) => void;
   
   // Auth actions
   signOut: () => Promise<void>;
@@ -102,11 +104,13 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       isInitialized: false,
+      needsProfileSetup: false,
       
       setUser: (user) => set({ user: user ? processProfile(user) : null, isAuthenticated: !!user }),
       setTenant: (tenant) => set({ tenant: tenant ? processTenant(tenant) : null }),
       setStore: (store) => set({ store }),
       setLoading: (isLoading) => set({ isLoading }),
+      setNeedsProfileSetup: (needs) => set({ needsProfileSetup: needs }),
       
       signOut: async () => {
         try {
@@ -119,6 +123,7 @@ export const useAuthStore = create<AuthState>()(
           tenant: null,
           store: null,
           isAuthenticated: false,
+          needsProfileSetup: false,
         });
       },
       
@@ -129,13 +134,17 @@ export const useAuthStore = create<AuthState>()(
           if (profile) {
             const processedProfile = processProfile(profile);
             const processedTenant = processTenant((profile as any).tenant);
+            const needsProfileSetup = !processedProfile?.tenant_id;
             
             set({
               user: processedProfile,
               tenant: processedTenant,
               store: (profile as any).store as Store,
               isAuthenticated: true,
+              needsProfileSetup,
             });
+          } else {
+            set({ needsProfileSetup: false });
           }
         } catch (error) {
           console.error('Failed to refresh user:', error);
@@ -155,11 +164,11 @@ export const useAuthStore = create<AuthState>()(
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session?.user) {
-            // Fetch user profile with relations using auth_id
+            // Fetch user profile with relations using primary id
             const { data: profileData, error } = await supabase
               .from('users')
               .select('*, tenant:tenants(*), store:stores(*)')
-              .eq('auth_id', session.user.id)
+              .eq('id', session.user.id)
               .maybeSingle();
             
             if (error) {
@@ -169,18 +178,21 @@ export const useAuthStore = create<AuthState>()(
             if (profileData) {
               const processedProfile = processProfile(profileData);
               const processedTenant = processTenant((profileData as any).tenant);
+              const needsProfileSetup = !processedProfile?.tenant_id;
               
               set({
                 user: processedProfile,
                 tenant: processedTenant,
                 store: (profileData as any).store as Store,
                 isAuthenticated: true,
+                needsProfileSetup,
               });
             } else {
               // User exists in auth but no profile - needs business setup
               console.log('User has no profile yet (new user)');
               set({
                 isAuthenticated: true, // They are authenticated
+                needsProfileSetup: true,
               });
             }
           }
@@ -198,6 +210,7 @@ export const useAuthStore = create<AuthState>()(
         tenant: state.tenant,
         store: state.store,
         isAuthenticated: state.isAuthenticated,
+        needsProfileSetup: state.needsProfileSetup,
       }),
     }
   )
@@ -213,7 +226,7 @@ const { data: { subscription } } = onAuthStateChange(async (event, session) => {
       const { data: profileData } = await supabase
         .from('users')
         .select('*, tenant:tenants(*), store:stores(*)')
-        .eq('auth_id', session.user.id)
+        .eq('id', session.user.id)
         .maybeSingle();
       
       if (profileData) {
@@ -223,6 +236,7 @@ const { data: { subscription } } = onAuthStateChange(async (event, session) => {
           store: (profileData as any).store as Store,
           isAuthenticated: true,
           isLoading: false,
+          needsProfileSetup: !(profileData as any).tenant_id,
         });
       } else {
         // User exists in auth but no profile yet - that's OK for new users
@@ -230,12 +244,14 @@ const { data: { subscription } } = onAuthStateChange(async (event, session) => {
         useAuthStore.setState({
           isAuthenticated: true,
           isLoading: false,
+          needsProfileSetup: true,
         });
       }
     } catch (error) {
       console.error('[AuthStore] Error fetching profile on sign in:', error);
       useAuthStore.setState({
         isLoading: false,
+        needsProfileSetup: false,
       });
     }
   } else if (event === 'SIGNED_OUT') {
@@ -246,6 +262,7 @@ const { data: { subscription } } = onAuthStateChange(async (event, session) => {
       store: null,
       isAuthenticated: false,
       isLoading: false,
+      needsProfileSetup: false,
     });
   } else if (event === 'TOKEN_REFRESHED') {
     // Session refreshed

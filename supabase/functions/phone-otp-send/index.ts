@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Edge Function: Send OTP via SMS (mNotify/Termii)
 // v6 - OPTIMIZED: Parallel operations, faster rate limiting
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -5,7 +6,7 @@ import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, formatPhone, generateOTP, hashOTP, isDevelopment } from '../_shared/utils.ts';
 import { sendSMS } from '../_shared/sms.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -18,6 +19,12 @@ serve(async (req) => {
     
     if (!phone || !country) {
       return errorResponse('Phone and country are required', 400);
+    }
+
+    // Only allow known purposes to avoid abuse
+    const allowedPurposes = ['login', 'registration'];
+    if (!allowedPurposes.includes(purpose)) {
+      return errorResponse('Invalid purpose', 400);
     }
 
     const formattedPhone = formatPhone(phone, country);
@@ -36,21 +43,34 @@ serve(async (req) => {
     // PRODUCTION: Optimized flow - do operations in parallel where possible
     const supabase = createSupabaseClient();
 
-    // Generate OTP hash while checking rate limit in parallel
+    // Generate OTP hash while checking rate limits in parallel
     const otpHashPromise = hashOTP(otp);
     const rateLimitPromise = supabase
       .from('phone_otps')
       .select('created_at')
       .eq('phone', formattedPhone)
+      .eq('purpose', purpose)
       .gte('created_at', new Date(Date.now() - 60000).toISOString())
       .limit(1)
       .maybeSingle();
 
-    const [otpHash, { data: recentOtp }] = await Promise.all([otpHashPromise, rateLimitPromise]);
+    // Secondary limit: max 5 sends per 15 minutes per phone/purpose
+    const burstLimitPromise = supabase
+      .from('phone_otps')
+      .select('id', { count: 'exact', head: true })
+      .eq('phone', formattedPhone)
+      .eq('purpose', purpose)
+      .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString());
+
+    const [otpHash, { data: recentOtp }, { count: burstCount }] = await Promise.all([otpHashPromise, rateLimitPromise, burstLimitPromise]);
 
     if (recentOtp) {
       const waitTime = Math.ceil((60000 - (Date.now() - new Date(recentOtp.created_at).getTime())) / 1000);
       return errorResponse(`Please wait ${waitTime} seconds before requesting a new code`, 429);
+    }
+
+    if (typeof burstCount === 'number' && burstCount >= 5) {
+      return errorResponse('Too many codes requested. Try again later.', 429);
     }
 
     console.log('Rate limit passed, took:', Date.now() - startTime, 'ms');

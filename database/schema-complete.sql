@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS sms_logs CASCADE;
 DROP TABLE IF EXISTS whatsapp_logs CASCADE;
+DROP TABLE IF EXISTS phone_users CASCADE;
 DROP TABLE IF EXISTS phone_otps CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS stores CASCADE;
@@ -72,6 +73,9 @@ CREATE TABLE users (
     tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
     store_id UUID REFERENCES stores(id) ON DELETE SET NULL,
     pin_hash VARCHAR(255),
+    pin_failed_attempts INTEGER NOT NULL DEFAULT 0,
+    pin_locked_until TIMESTAMPTZ,
+    pin_updated_at TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -253,11 +257,18 @@ CREATE TABLE phone_otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     phone VARCHAR(20) NOT NULL,
     otp_hash VARCHAR(255) NOT NULL,
-    purpose VARCHAR(20) NOT NULL DEFAULT 'login' CHECK (purpose IN ('login', 'registration', 'pin_reset', 'rider_login')),
+    purpose VARCHAR(20) NOT NULL DEFAULT 'login' CHECK (purpose IN ('login', 'registration')),
     attempts INTEGER DEFAULT 0,
     max_attempts INTEGER DEFAULT 5,
     expires_at TIMESTAMPTZ NOT NULL,
     verified_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Phone mapping for faster lookup and PIN verification
+CREATE TABLE phone_users (
+    phone VARCHAR(20) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -329,6 +340,8 @@ CREATE INDEX idx_payments_order ON payments(order_id);
 CREATE INDEX idx_phone_otps_phone ON phone_otps(phone);
 CREATE INDEX idx_phone_otps_expires ON phone_otps(expires_at);
 CREATE INDEX idx_phone_otps_lookup ON phone_otps(phone, otp_hash, purpose) WHERE verified_at IS NULL;
+CREATE UNIQUE INDEX idx_phone_otps_phone_purpose ON phone_otps(phone, purpose);
+CREATE INDEX idx_phone_users_user_id ON phone_users(user_id);
 
 -- =====================================================
 -- PART 4: ROW LEVEL SECURITY

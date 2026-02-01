@@ -59,6 +59,9 @@ export function LoginPage() {
         setMode('verify-otp');
         setResendCountdown(60);
         toast.success('OTP sent to your phone! 📱');
+        if (result.devOTP && import.meta.env.DEV) {
+          toast.info(`Dev OTP: ${result.devOTP}`, { duration: 6000 });
+        }
       } else {
         toast.error(result.error || 'Failed to send OTP');
       }
@@ -119,6 +122,9 @@ export function LoginPage() {
       if (result.success) {
         setResendCountdown(60);
         toast.success('New OTP sent! 📱');
+        if (result.devOTP && import.meta.env.DEV) {
+          toast.info(`Dev OTP: ${result.devOTP}`, { duration: 6000 });
+        }
       } else {
         toast.error(result.error || 'Failed to resend OTP');
       }

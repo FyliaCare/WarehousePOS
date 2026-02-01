@@ -50,7 +50,7 @@ export interface AuthUser {
 
 export interface UserProfile {
   id: string;
-  auth_id: string;
+  auth_id?: string;
   full_name: string;
   email?: string;
   phone?: string;
@@ -254,7 +254,7 @@ export async function signIn(
         tenant:tenants(*),
         store:stores(*)
       `)
-      .eq('auth_id', data.user.id)
+      .eq('id', data.user.id)
       .maybeSingle();
 
     if (profileError) {
@@ -475,7 +475,7 @@ export async function setupBusiness(params: BusinessSetupParams): Promise<Profil
     const { data: existingProfile } = await supabase
       .from('users')
       .select('*, tenant:tenants(*), store:stores(*)')
-      .eq('auth_id', user.id)
+      .eq('id', user.id)
       .maybeSingle();
 
     if (existingProfile?.tenant_id) {
@@ -556,7 +556,7 @@ export async function setupBusiness(params: BusinessSetupParams): Promise<Profil
           store_id: store.id,
           role: 'owner',
         })
-        .eq('auth_id', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -574,7 +574,8 @@ export async function setupBusiness(params: BusinessSetupParams): Promise<Profil
       const { data: profile, error: insertError } = await supabase
         .from('users')
         .insert({
-          auth_id: user.id,
+          id: user.id,
+          auth_id: user.id, // mirror for backward compatibility
           full_name: fullName.trim(),
           email: user.email,
           phone: formattedPhone,
@@ -627,7 +628,7 @@ export async function getCurrentUser(): Promise<{
         tenant:tenants(*),
         store:stores(*)
       `)
-      .eq('auth_id', user.id)
+      .eq('id', user.id)
       .maybeSingle();
 
     return {

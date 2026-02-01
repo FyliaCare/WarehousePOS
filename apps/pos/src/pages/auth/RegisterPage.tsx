@@ -94,6 +94,9 @@ export function RegisterPage() {
         toast.success('OTP sent to your phone! 📱');
         setResendCountdown(60);
         setStep('otp');
+        if (result.devOTP && import.meta.env.DEV) {
+          toast.info(`Dev OTP: ${result.devOTP}`, { duration: 6000 });
+        }
       } else {
         toast.error(result.error || 'Failed to send OTP');
       }
@@ -147,6 +150,9 @@ export function RegisterPage() {
       if (result.success) {
         setResendCountdown(60);
         toast.success('New OTP sent! 📱');
+        if (result.devOTP && import.meta.env.DEV) {
+          toast.info(`Dev OTP: ${result.devOTP}`, { duration: 6000 });
+        }
       } else {
         toast.error(result.error || 'Failed to resend OTP');
       }

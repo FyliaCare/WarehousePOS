@@ -6,23 +6,23 @@ import { supabase } from './supabase';
 
 // Validate PIN strength
 export function validatePIN(pin: string): { valid: boolean; error?: string } {
-  if (!/^\d{6}$/.test(pin)) {
-    return { valid: false, error: 'PIN must be exactly 6 digits' };
+  if (!/^\d{4,6}$/.test(pin)) {
+    return { valid: false, error: 'PIN must be 4-6 digits' };
   }
   
   // Check for sequential
-  const sequential = ['123456', '234567', '345678', '456789', '567890', '654321', '543210', '432109', '321098', '210987'];
-  if (sequential.includes(pin)) {
+  const sequential = ['0123', '1234', '2345', '3456', '4567', '5678', '6789', '9876', '8765', '7654', '6543', '5432', '4321'];
+  if (sequential.some(seq => pin.startsWith(seq))) {
     return { valid: false, error: 'PIN cannot be sequential numbers' };
   }
   
   // Check for repeated
-  if (/^(\d)\1{5}$/.test(pin)) {
+  if (/^(\d)\1{3,5}$/.test(pin)) {
     return { valid: false, error: 'PIN cannot be all the same digit' };
   }
   
   // Check for common PINs
-  const common = ['000000', '111111', '123123', '121212', '696969', '112233'];
+  const common = ['0000', '1111', '1234', '1212', '1122', '000000', '111111', '123123', '121212', '112233'];
   if (common.includes(pin)) {
     return { valid: false, error: 'PIN is too common, choose a different one' };
   }
@@ -175,7 +175,7 @@ export async function verifyOTP(phone: string, otp: string, country: 'GH' | 'NG'
 }
 
 // Set user PIN (for quick login)
-export async function setPIN(userId: string, pin: string): Promise<{
+export async function setPIN(pin: string): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -183,63 +183,69 @@ export async function setPIN(userId: string, pin: string): Promise<{
   if (!validation.valid) {
     return { success: false, message: validation.error! };
   }
-  
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({ pin_hash: await hashPIN(pin) })
-      .eq('id', userId);
-      
+    const { data, error } = await supabase.functions.invoke('pin-set', {
+      body: { pin },
+    });
+
     if (error) {
-      return { success: false, message: 'Failed to set PIN' };
+      console.error('Set PIN error:', error);
+      return { success: false, message: error.message || 'Failed to set PIN' };
     }
-    
-    return { success: true, message: 'PIN set successfully' };
+
+    return { success: data?.success ?? false, message: data?.message || 'PIN set successfully' };
   } catch (err) {
+    console.error('Set PIN exception:', err);
     return { success: false, message: 'Error setting PIN' };
   }
 }
 
-// Verify PIN for quick login
-export async function verifyPIN(userId: string, pin: string): Promise<{
+// Verify PIN for quick login (server-side verification + lockout)
+export async function verifyPIN(phone: string, country: 'GH' | 'NG', pin: string): Promise<{
   success: boolean;
   message: string;
+  session?: any;
+  user?: any;
+  profile?: any;
+  needsProfileSetup?: boolean;
+  lockedUntil?: string | null;
+  attemptsRemaining?: number;
 }> {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('pin_hash')
-      .eq('id', userId)
-      .single();
-      
-    if (error || !data?.pin_hash) {
-      return { success: false, message: 'PIN not set for this user' };
+    const { data, error } = await supabase.functions.invoke('pin-verify', {
+      body: { phone, country, pin },
+    });
+
+    if (error) {
+      console.error('Verify PIN error:', error);
+      return {
+        success: false,
+        message: error.message || 'PIN verification failed',
+        lockedUntil: (error as any)?.lockedUntil,
+      };
     }
-    
-    const isValid = await verifyPINHash(pin, data.pin_hash);
-    
-    if (!isValid) {
-      return { success: false, message: 'Incorrect PIN' };
+
+    if (data?.session) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
     }
-    
-    return { success: true, message: 'PIN verified' };
+
+    return {
+      success: data?.success ?? false,
+      message: data?.message || 'PIN verified',
+      session: data?.session,
+      user: data?.user,
+      profile: data?.profile,
+      needsProfileSetup: data?.needsProfileSetup,
+      lockedUntil: data?.lockedUntil,
+      attemptsRemaining: data?.attemptsRemaining,
+    };
   } catch (err) {
+    console.error('Verify PIN exception:', err);
     return { success: false, message: 'Error verifying PIN' };
   }
-}
-
-// Simple hash function for PIN (client-side)
-async function hashPIN(pin: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pin + 'warehousepos-pin-salt');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function verifyPINHash(pin: string, hash: string): Promise<boolean> {
-  const inputHash = await hashPIN(pin);
-  return inputHash === hash;
 }
 
 // Sign out

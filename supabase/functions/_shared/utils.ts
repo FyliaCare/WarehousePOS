@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import bcrypt from 'npm:bcryptjs@2.4.3';
 
 // Environment helpers
 export function getEnv(key: string, required = true): string {
@@ -55,4 +56,19 @@ export async function hashOTP(otp: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Secure PIN hashing helpers (bcrypt)
+export function hashPIN(pin: string): string {
+  const salt = bcrypt.genSaltSync(12);
+  return bcrypt.hashSync(pin, salt);
+}
+
+export function verifyPIN(pin: string, hash: string): boolean {
+  try {
+    return bcrypt.compareSync(pin, hash);
+  } catch (err) {
+    console.error('PIN verify error:', err);
+    return false;
+  }
 }

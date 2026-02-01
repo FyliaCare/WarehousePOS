@@ -31,6 +31,9 @@ BEGIN
     END IF;
 END $$;
 
+-- Step 1b: Backfill auth_id from id where missing (mirror only; RLS uses id)
+UPDATE users SET auth_id = id WHERE auth_id IS NULL;
+
 -- Step 2: Make tenant_id nullable (needed during registration - user created before tenant assigned)
 ALTER TABLE users ALTER COLUMN tenant_id DROP NOT NULL;
 

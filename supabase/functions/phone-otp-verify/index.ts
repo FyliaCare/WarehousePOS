@@ -1,10 +1,11 @@
+// @ts-nocheck
 // Edge Function: Verify OTP and create Supabase Auth session
 // v12 - SIMPLIFIED: Better error handling, cleaner flow
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, successResponse, errorResponse } from '../_shared/cors.ts';
 import { createSupabaseClient, formatPhone, hashOTP, isDevelopment } from '../_shared/utils.ts';
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -28,6 +29,11 @@ serve(async (req) => {
     
     if (!phone || !country || !otp) {
       return errorResponse('Phone, country, and OTP are required', 400, undefined, req);
+    }
+
+    const allowedPurposes = ['login', 'registration'];
+    if (!allowedPurposes.includes(purpose)) {
+      return errorResponse('Invalid purpose', 400, undefined, req);
     }
     
     if (!/^\d{6}$/.test(otp)) {
@@ -135,7 +141,7 @@ serve(async (req) => {
           
           console.log('Total users found:', userList?.users?.length);
           
-          const existingUser = userList?.users?.find(u => 
+          const existingUser = userList?.users?.find((u: any) => 
             u.phone === formattedPhone || 
             u.phone === formattedPhone.replace('+', '')
           );
