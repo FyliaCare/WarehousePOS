@@ -134,7 +134,10 @@ CREATE TABLE stores (
 -- 3. USERS (Staff members)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE, -- Nullable during registration
+    
+    -- Link to Supabase Auth
+    auth_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     
     -- Basic info
     full_name TEXT NOT NULL,
@@ -387,6 +390,7 @@ CREATE INDEX idx_users_tenant ON users(tenant_id);
 CREATE INDEX idx_users_store ON users(store_id);
 CREATE INDEX idx_users_phone ON users(phone);
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_auth_id ON users(auth_id);
 
 -- Categories
 CREATE INDEX idx_categories_store ON categories(store_id);
@@ -503,6 +507,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- RPC function to decrement stock (called from frontend)
+CREATE OR REPLACE FUNCTION decrement_stock(p_product_id UUID, p_quantity INTEGER)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE stock_levels
+    SET quantity = quantity - p_quantity,
+        updated_at = NOW()
+    WHERE product_id = p_product_id;
+END;
+$$;
+
+-- RPC function to increment stock
+CREATE OR REPLACE FUNCTION increment_stock(p_product_id UUID, p_quantity INTEGER)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE stock_levels
+    SET quantity = quantity + p_quantity,
+        updated_at = NOW()
+    WHERE product_id = p_product_id;
+END;
+$$;
+
+-- Grant execute on RPC functions
+GRANT EXECUTE ON FUNCTION decrement_stock(UUID, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION increment_stock(UUID, INTEGER) TO authenticated;
+
 -- ==========================================
 -- TRIGGERS
 -- ==========================================
@@ -560,14 +596,6 @@ CREATE TRIGGER tr_update_customer_stats
     FOR EACH ROW EXECUTE FUNCTION update_customer_stats_on_sale();
 
 -- ==========================================
--- RLS POLICIES (Disabled for now - enable later)
--- ==========================================
-
--- When ready, enable RLS with:
--- ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
--- etc.
-
--- ==========================================
 -- AUTHENTICATION: Phone OTPs table
 -- ==========================================
 
@@ -596,6 +624,373 @@ BEGIN
     DELETE FROM phone_otps WHERE expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==========================================
+-- RLS POLICIES
+-- ==========================================
+
+-- Enable RLS on all tables
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_levels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE phone_otps ENABLE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- HELPER FUNCTIONS FOR RLS
+-- ==========================================
+
+-- Function to get current user's tenant_id
+CREATE OR REPLACE FUNCTION get_user_tenant_id()
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+DECLARE
+    v_tenant_id UUID;
+BEGIN
+    SELECT tenant_id INTO v_tenant_id
+    FROM users
+    WHERE auth_id = auth.uid()
+    LIMIT 1;
+    
+    RETURN v_tenant_id;
+END;
+$$;
+
+-- Function to check if current user is owner
+CREATE OR REPLACE FUNCTION is_owner()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM users
+        WHERE auth_id = auth.uid()
+        AND role = 'owner'
+    );
+END;
+$$;
+
+-- Function to check if current user is owner or manager
+CREATE OR REPLACE FUNCTION is_manager()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM users
+        WHERE auth_id = auth.uid()
+        AND role IN ('owner', 'manager')
+    );
+END;
+$$;
+
+-- Grant execute on helper functions
+GRANT EXECUTE ON FUNCTION get_user_tenant_id() TO authenticated;
+GRANT EXECUTE ON FUNCTION is_owner() TO authenticated;
+GRANT EXECUTE ON FUNCTION is_manager() TO authenticated;
+
+-- ==========================================
+-- TENANTS POLICIES
+-- ==========================================
+
+-- Authenticated users can create tenants during registration
+CREATE POLICY "Allow insert for authenticated" ON tenants
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Users can view their own tenant
+CREATE POLICY "Users can view own tenant" ON tenants
+    FOR SELECT USING (
+        id IN (SELECT tenant_id FROM users WHERE auth_id = auth.uid())
+    );
+
+-- Owners can update their tenant
+CREATE POLICY "Owners can update own tenant" ON tenants
+    FOR UPDATE USING (
+        id IN (SELECT tenant_id FROM users WHERE auth_id = auth.uid() AND role = 'owner')
+    );
+
+-- ==========================================
+-- STORES POLICIES
+-- ==========================================
+
+-- Authenticated users can create stores (during registration)
+CREATE POLICY "Allow insert for authenticated" ON stores
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Users can view stores in their tenant
+CREATE POLICY "Users can view tenant stores" ON stores
+    FOR SELECT USING (
+        tenant_id IN (SELECT tenant_id FROM users WHERE auth_id = auth.uid())
+    );
+
+-- Owners can manage stores
+CREATE POLICY "Owners can manage stores" ON stores
+    FOR ALL USING (
+        tenant_id IN (SELECT tenant_id FROM users WHERE auth_id = auth.uid() AND role = 'owner')
+    );
+
+-- ==========================================
+-- USERS POLICIES
+-- ==========================================
+
+-- Authenticated users can create their own profile (during registration)
+CREATE POLICY "Allow users to insert own profile" ON users
+    FOR INSERT WITH CHECK (auth_id = auth.uid());
+
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile" ON users
+    FOR SELECT USING (auth_id = auth.uid());
+
+-- Users can view other users in same tenant
+CREATE POLICY "Users can view same tenant users" ON users
+    FOR SELECT USING (
+        tenant_id IN (SELECT tenant_id FROM users WHERE auth_id = auth.uid())
+    );
+
+-- Users can update their own profile
+CREATE POLICY "Users can update own profile" ON users
+    FOR UPDATE USING (auth_id = auth.uid());
+
+-- Owners can insert new users in their tenant
+CREATE POLICY "Owners can insert users" ON users
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE auth_id = auth.uid() 
+            AND tenant_id = users.tenant_id 
+            AND role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- CATEGORIES POLICIES
+-- ==========================================
+
+-- Users can view categories in their tenant's stores
+CREATE POLICY "Users can view tenant categories" ON categories
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- Managers can manage categories
+CREATE POLICY "Managers can manage categories" ON categories
+    FOR ALL USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid() AND u.role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- PRODUCTS POLICIES
+-- ==========================================
+
+-- Users can view products in their tenant's stores
+CREATE POLICY "Users can view tenant products" ON products
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- Managers can manage products
+CREATE POLICY "Managers can manage products" ON products
+    FOR ALL USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid() AND u.role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- PRODUCT VARIANTS POLICIES
+-- ==========================================
+
+-- Users can view variants in their tenant's products
+CREATE POLICY "Users can view tenant variants" ON product_variants
+    FOR SELECT USING (
+        product_id IN (
+            SELECT p.id FROM products p
+            JOIN stores s ON s.id = p.store_id
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- Managers can manage variants
+CREATE POLICY "Managers can manage variants" ON product_variants
+    FOR ALL USING (
+        product_id IN (
+            SELECT p.id FROM products p
+            JOIN stores s ON s.id = p.store_id
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid() AND u.role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- STOCK LEVELS POLICIES
+-- ==========================================
+
+-- Users can view stock in their stores
+CREATE POLICY "Users can view stock" ON stock_levels
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- Managers can manage stock
+CREATE POLICY "Managers can manage stock" ON stock_levels
+    FOR ALL USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid() AND u.role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- STOCK MOVEMENTS POLICIES
+-- ==========================================
+
+-- Users can view movements in their stores
+CREATE POLICY "Users can view movements" ON stock_movements
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- All users can insert movements (sales, adjustments)
+CREATE POLICY "Users can insert movements" ON stock_movements
+    FOR INSERT WITH CHECK (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- ==========================================
+-- CUSTOMERS POLICIES
+-- ==========================================
+
+-- Users can view customers in their stores
+CREATE POLICY "Users can view customers" ON customers
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- All users can manage customers
+CREATE POLICY "Users can manage customers" ON customers
+    FOR ALL USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- ==========================================
+-- SALES POLICIES
+-- ==========================================
+
+-- Users can view sales in their stores
+CREATE POLICY "Users can view sales" ON sales
+    FOR SELECT USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- All users can create sales
+CREATE POLICY "Users can create sales" ON sales
+    FOR INSERT WITH CHECK (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid()
+        )
+    );
+
+-- Managers can update sales
+CREATE POLICY "Managers can update sales" ON sales
+    FOR UPDATE USING (
+        store_id IN (
+            SELECT s.id FROM stores s
+            JOIN users u ON u.tenant_id = s.tenant_id
+            WHERE u.auth_id = auth.uid() AND u.role IN ('owner', 'manager')
+        )
+    );
+
+-- ==========================================
+-- SALE ITEMS POLICIES
+-- ==========================================
+
+-- Users can view sale items for sales they can see
+CREATE POLICY "Users can view sale items" ON sale_items
+    FOR SELECT USING (
+        sale_id IN (
+            SELECT id FROM sales WHERE store_id IN (
+                SELECT s.id FROM stores s
+                JOIN users u ON u.tenant_id = s.tenant_id
+                WHERE u.auth_id = auth.uid()
+            )
+        )
+    );
+
+-- All users can create sale items
+CREATE POLICY "Users can create sale items" ON sale_items
+    FOR INSERT WITH CHECK (
+        sale_id IN (
+            SELECT id FROM sales WHERE store_id IN (
+                SELECT s.id FROM stores s
+                JOIN users u ON u.tenant_id = s.tenant_id
+                WHERE u.auth_id = auth.uid()
+            )
+        )
+    );
+
+-- ==========================================
+-- PHONE OTPS POLICIES (Service role only)
+-- ==========================================
+
+-- Only service_role can manage OTPs (Edge Functions)
+CREATE POLICY "Service role can manage OTPs" ON phone_otps
+    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
 
 -- ==========================================
 -- DONE!
