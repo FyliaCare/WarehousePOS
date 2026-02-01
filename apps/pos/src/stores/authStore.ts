@@ -310,13 +310,16 @@ const { data: { subscription } } = onAuthStateChange(async (event, session) => {
         .maybeSingle();
       
       if (profileData) {
+        const processedProfile = processProfile(profileData);
+        const processedTenant = processTenant((profileData as any).tenant);
+        
         useAuthStore.setState({
-          user: profileData as UserProfile,
-          tenant: (profileData as any).tenant as Tenant,
+          user: processedProfile,
+          tenant: processedTenant,
           store: (profileData as any).store as Store,
           isAuthenticated: true,
           isLoading: false,
-          needsProfileSetup: !(profileData as any).tenant_id,
+          needsProfileSetup: !processedProfile?.tenant_id,
         });
       } else {
         // User exists in auth but no profile yet - that's OK for new users

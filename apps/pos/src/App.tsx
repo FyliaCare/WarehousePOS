@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { PWAInstallPrompt, OfflineIndicator } from '@/components/PWAInstallPrompt';
 import { Loader2 } from 'lucide-react';
@@ -94,7 +94,12 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { isInitialized } = useAuthStore();
+  const { isInitialized, initialize } = useAuthStore();
+  
+  // Initialize auth on app mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
   
   // Show loading screen until auth is initialized
   if (!isInitialized) {
