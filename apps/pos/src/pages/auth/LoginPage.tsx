@@ -89,17 +89,21 @@ export function LoginPage() {
         if (result.needsProfileSetup) {
           toast.info('Please complete your registration');
           navigate('/register', { state: { phone, country, userId: result.user?.id } });
+          setIsLoading(false);
           return;
         }
         
         // User has a profile - refresh user data from auth state
         try {
           await refreshUser();
+          toast.success('Login successful! 🎉');
+          navigate('/dashboard');
         } catch (e) {
-          logger.warn('Failed to refresh user, navigating anyway', { error: String(e) });
+          logger.error('Failed to refresh user', { error: String(e) });
+          toast.error('Login succeeded but failed to load profile. Please try logging in again.');
+          setIsLoading(false);
+          // Stay on login page - user can retry
         }
-        toast.success('Login successful! 🎉');
-        navigate('/dashboard');
       } else {
         toast.error(result.error || 'Invalid OTP');
         setIsLoading(false);
@@ -120,6 +124,7 @@ export function LoginPage() {
       const result = await sendOTP(phone, country, 'login');
       
       if (result.success) {
+        setOtp(''); // Clear old OTP input
         setResendCountdown(60);
         toast.success('New OTP sent! 📱');
         if (result.devOTP && import.meta.env.DEV) {

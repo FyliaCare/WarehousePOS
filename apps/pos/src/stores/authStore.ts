@@ -95,6 +95,37 @@ function processTenant(tenant: any): Tenant | null {
   };
 }
 
+// Request deduplication for getSession - prevents multiple simultaneous calls
+let sessionPromiseCache: Promise<any> | null = null;
+let sessionCacheExpiry = 0;
+const SESSION_CACHE_TTL = 1000; // 1 second cache
+
+function getDedupedSession() {
+  const now = Date.now();
+  
+  // Return cached promise if still valid
+  if (sessionPromiseCache && now < sessionCacheExpiry) {
+    console.log('[AuthStore] Using cached session promise');
+    return sessionPromiseCache;
+  }
+  
+  // Create new request
+  console.log('[AuthStore] Creating new session request');
+  sessionPromiseCache = supabase.auth.getSession();
+  sessionCacheExpiry = now + SESSION_CACHE_TTL;
+  
+  // Clear cache after completion
+  sessionPromiseCache.finally(() => {
+    setTimeout(() => {
+      if (sessionPromiseCache && Date.now() >= sessionCacheExpiry) {
+        sessionPromiseCache = null;
+      }
+    }, SESSION_CACHE_TTL);
+  });
+  
+  return sessionPromiseCache;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -160,16 +191,63 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         
         try {
-          // Check for existing session
-          const { data: { session } } = await supabase.auth.getSession();
+          // Add timeout to prevent infinite loading
+          const SESSION_TIMEOUT = 10000; // 10 seconds
+          const sessionPromise = getDedupedSession(); // Use deduped version
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Session timeout')), SESSION_TIMEOUT)
+          );
+          
+          let session;
+          try {
+            const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+            session = data?.session;
+          } catch (error: any) {
+            if (error.message === 'Session timeout') {
+              console.error('[AuthStore] Session fetch timed out, using cached state');
+              // Try to use cached auth from persisted state
+              const cachedState = get();
+              if (cachedState.user && cachedState.isAuthenticated) {
+                set({ isLoading: false, isInitialized: true });
+                return;
+              }
+            }
+            throw error;
+          }
           
           if (session?.user) {
-            // Fetch user profile with relations using primary id
-            const { data: profileData, error } = await supabase
+            // Add timeout for profile fetch too
+            const PROFILE_TIMEOUT = 8000; // 8 seconds
+            const profilePromise = supabase
               .from('users')
               .select('*, tenant:tenants(*), store:stores(*)')
               .eq('id', session.user.id)
               .maybeSingle();
+            
+            const profileTimeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Profile timeout')), PROFILE_TIMEOUT)
+            );
+            
+            let profileData;
+            let error;
+            try {
+              const result = await Promise.race([profilePromise, profileTimeoutPromise]) as any;
+              profileData = result.data;
+              error = result.error;
+            } catch (profileError: any) {
+              if (profileError.message === 'Profile timeout') {
+                console.error('[AuthStore] Profile fetch timed out');
+                // Set authenticated but flag as needing setup
+                set({
+                  isAuthenticated: true,
+                  needsProfileSetup: true,
+                  isLoading: false,
+                  isInitialized: true,
+                });
+                return;
+              }
+              throw profileError;
+            }
             
             if (error) {
               console.error('Profile fetch error:', error);
@@ -198,6 +276,8 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (error) {
           console.error('Auth initialization error:', error);
+          // On error, mark as initialized anyway to prevent infinite loading
+          set({ isAuthenticated: false, needsProfileSetup: false });
         } finally {
           set({ isLoading: false, isInitialized: true });
         }

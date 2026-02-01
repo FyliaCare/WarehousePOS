@@ -10,6 +10,23 @@ serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
+  // CSRF Protection: Validate origin
+  const origin = req.headers.get('origin');
+  const allowedOrigins = [
+    'https://pos.warehousepos.app',
+    'https://pos-staging.warehousepos.app',
+    'http://localhost:5174',
+    'http://localhost:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5173',
+  ];
+  
+  // Allow if no origin (direct API calls) OR if origin is in whitelist
+  if (origin && !allowedOrigins.includes(origin)) {
+    console.warn('Blocked request from unauthorized origin:', origin);
+    return errorResponse('Forbidden - Invalid origin', 403, undefined, req);
+  }
+
   const isDev = isDevelopment();
   const startTime = Date.now();
   console.log('phone-otp-send v6 (optimized) - isDev:', isDev);

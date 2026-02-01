@@ -211,19 +211,43 @@ export async function verifyOTP(
     // MUST AWAIT to ensure session is set before we return success
     if (data.session) {
       console.log('Setting session...');
-      try {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
-        if (sessionError) {
-          console.error('Failed to set session:', sessionError);
-          return { success: false, error: 'Failed to establish session' };
+      
+      // Retry logic with exponential backoff
+      let sessionSet = false;
+      const maxRetries = 3;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+          
+          if (sessionError) {
+            if (attempt === maxRetries) {
+              console.error('Failed to set session after', maxRetries, 'attempts:', sessionError);
+              return { success: false, error: 'Failed to establish session. Please try again.' };
+            }
+            // Wait before retry with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            continue;
+          }
+          
+          sessionSet = true;
+          console.log('Session set successfully');
+          break;
+        } catch (sessionError) {
+          if (attempt === maxRetries) {
+            console.error('Exception setting session after', maxRetries, 'attempts:', sessionError);
+            return { success: false, error: 'Failed to establish session. Please try again.' };
+          }
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
-        console.log('Session set successfully');
-      } catch (sessionError) {
-        console.error('Exception setting session:', sessionError);
-        return { success: false, error: 'Failed to establish session' };
+      }
+      
+      if (!sessionSet) {
+        return { success: false, error: 'Failed to establish session after multiple retries' };
       }
     }
     

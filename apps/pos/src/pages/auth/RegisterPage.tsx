@@ -148,6 +148,7 @@ export function RegisterPage() {
       const result = await sendOTP(phone, country, 'registration');
       
       if (result.success) {
+        setOtp(''); // Clear old OTP input
         setResendCountdown(60);
         toast.success('New OTP sent! 📱');
         if (result.devOTP && import.meta.env.DEV) {

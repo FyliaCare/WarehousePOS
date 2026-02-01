@@ -58,14 +58,20 @@ function PageLoading() {
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, tenant } = useAuthStore();
+  const { isAuthenticated, tenant, needsProfileSetup, isInitialized, isLoading } = useAuthStore();
+  
+  // Show loading while auth is initializing
+  if (!isInitialized || isLoading) {
+    return <PageLoading />;
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  if (!tenant) {
-    return <Navigate to="/select-country" replace />;
+  // If authenticated but no profile or tenant, redirect to setup (NOT select-country)
+  if (needsProfileSetup || !tenant) {
+    return <Navigate to="/setup" replace />;
   }
   
   return <>{children}</>;
@@ -73,7 +79,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Auth route wrapper (redirect if already logged in)
 function AuthRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, tenant } = useAuthStore();
+  const { isAuthenticated, tenant, isInitialized, isLoading } = useAuthStore();
+  
+  // Show loading while auth is initializing
+  if (!isInitialized || isLoading) {
+    return <PageLoading />;
+  }
   
   if (isAuthenticated && tenant) {
     return <Navigate to="/dashboard" replace />;
@@ -83,6 +94,13 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { isInitialized } = useAuthStore();
+  
+  // Show loading screen until auth is initialized
+  if (!isInitialized) {
+    return <PageLoading />;
+  }
+  
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {/* PWA Components */}
