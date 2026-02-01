@@ -9,6 +9,22 @@ serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
+  // CSRF Protection: Validate origin
+  const origin = req.headers.get('origin');
+  const allowedOrigins = [
+    'https://delivery.warehousepos.app',
+    'https://delivery-staging.warehousepos.app',
+    'http://localhost:5175',
+    'http://localhost:5173',
+    'http://127.0.0.1:5175',
+    'http://127.0.0.1:5173',
+  ];
+  
+  if (origin && !allowedOrigins.includes(origin)) {
+    console.warn('Blocked request from unauthorized origin:', origin);
+    return errorResponse('Forbidden - Invalid origin', 403);
+  }
+
   const isDev = isDevelopment();
   console.log('send-rider-otp - isDev:', isDev);
 
